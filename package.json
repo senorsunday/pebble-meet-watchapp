@@ -1,7 +1,7 @@
 {
   "name": "pebble-meet-watchapp",
   "author": "Alex Palson",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Tactile Google Meet hardware controller watchapp for Pebble smartwatches.",
   "license": "MIT",
   "repository": {
