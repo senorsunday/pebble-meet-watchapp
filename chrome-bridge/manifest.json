@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "PebbleMeet Browser Bridge",
+  "version": "0.0.1",
+  "description": "Connects your Pebble smartwatch to Google Meet tabs for wrist-based mute, camera, raise hand, chat dictation, and call control.",
+  "permissions": [
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

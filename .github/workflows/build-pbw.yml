@@ -1,0 +1,55 @@
+name: Build & Release Pebble .pbw
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-pbw:
+    runs-on: ubuntu-latest
+    container:
+      image: rebble/pebble-sdk:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Pebble package.json & Chrome Bridge manifest
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('chrome-bridge/manifest.json','utf8'))"
+
+      - name: Install PebbleKit JS dependencies (pebble-clay)
+        run: npm install --no-audit --no-fund
+
+      - name: Compile Pebble watchapp (.pbw)
+        run: pebble build
+
+      - name: Verify .pbw output
+        run: |
+          ls -lh build/*.pbw
+          cp build/*.pbw build/pebble-meet-watchapp-v0.0.1.pbw
+
+      - name: Upload compiled .pbw artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pebble-meet-watchapp-pbw
+          path: build/*.pbw
+
+      - name: Publish GitHub Release on version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*.pbw
+            appstore/icon-48.png
+            appstore/icon-144.png
+            appstore/banner-720x320.png
+          generate_release_notes: true

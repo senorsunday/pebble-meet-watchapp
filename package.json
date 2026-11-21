@@ -1,0 +1,108 @@
+{
+  "name": "pebble-meet-watchapp",
+  "author": "Alex Palson",
+  "version": "0.0.1",
+  "description": "Tactile Google Meet hardware controller watchapp for Pebble smartwatches.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-github-username/pebble-meet-watchapp.git"
+  },
+  "homepage": "https://github.com/your-github-username/pebble-meet-watchapp",
+  "bugs": {
+    "url": "https://github.com/your-github-username/pebble-meet-watchapp/issues"
+  },
+  "keywords": [
+    "pebble-app",
+    "google-meet",
+    "remote",
+    "rebble"
+  ],
+  "dependencies": {
+    "pebble-clay": "^1.0.9"
+  },
+  "pebble": {
+    "displayName": "PebbleMeet",
+    "uuid": "5b7c8e90-4a12-4c9d-9f31-81a6e042f109",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery"
+    ],
+    "capabilities": [
+      "configurable"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "CMD_START_CALL",
+      "CMD_JOIN_MEETING",
+      "CMD_TOGGLE_MUTE",
+      "CMD_TOGGLE_CAMERA",
+      "CMD_RAISE_HAND",
+      "CMD_SEND_CHAT",
+      "CMD_ADMIT_GUEST",
+      "CMD_END_CALL",
+      "CFG_DEFAULT_PTT",
+      "CFG_JOIN_MUTED",
+      "CFG_JOIN_CAM_OFF",
+      "CFG_UP_SHORT",
+      "CFG_SELECT_SHORT",
+      "CFG_DOWN_SHORT",
+      "EVT_BANNER_BODY",
+      "MEETING_INDEX",
+      "MEETING_TITLE",
+      "MEETING_TIME",
+      "CONTACT_INDEX",
+      "CONTACT_NAME",
+      "CONTACT_ROLE",
+      "CONTACT_EMAIL",
+      "MEET_CODE",
+      "ACTIVE_SPEAKER",
+      "PARTICIPANT_COUNT",
+      "SYNC_MUTE",
+      "SYNC_CAMERA",
+      "SYNC_RECORDING"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "images/menu_icon.png",
+          "menuIcon": true
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_MIC_ON",
+          "file": "images/icon_mic_on.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_MIC_OFF",
+          "file": "images/icon_mic_off.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_CAM_ON",
+          "file": "images/icon_cam_on.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_CAM_OFF",
+          "file": "images/icon_cam_off.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_HANGUP",
+          "file": "images/icon_hangup.png"
+        }
+      ]
+    }
+  }
+}
