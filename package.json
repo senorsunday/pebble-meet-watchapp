@@ -19,7 +19,7 @@
     "rebble"
   ],
   "dependencies": {
-    "pebble-clay": "^1.0.9"
+    "pebble-clay": "^1.0.4"
   },
   "pebble": {
     "displayName": "PebbleMeet",
