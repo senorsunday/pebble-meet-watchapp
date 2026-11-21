@@ -19,7 +19,7 @@ jobs:
       image: rebble/pebble-sdk:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validate Pebble package.json & Chrome Bridge manifest
         run: |
@@ -47,14 +47,14 @@ jobs:
           cp build/*.pbw build/pebble-meet-watchapp-v0.0.1.pbw
 
       - name: Upload compiled .pbw artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pebble-meet-watchapp-pbw
           path: build/*.pbw
 
       - name: Publish GitHub Release on version tag
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             build/*.pbw
