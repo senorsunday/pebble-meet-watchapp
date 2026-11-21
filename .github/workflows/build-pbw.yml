@@ -30,7 +30,16 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Compile Pebble watchapp (.pbw)
-        run: pebble build
+        run: |
+          if [ -d /root/.pebble-sdk ] && [ ! -e "$HOME/.pebble-sdk" ]; then
+            ln -s /root/.pebble-sdk "$HOME/.pebble-sdk"
+          fi
+          mkdir -p "$HOME/.pebble-sdk"
+          touch "$HOME/.pebble-sdk/NO_TRACKING"
+          if [ ! -e "$HOME/.pebble-sdk/SDKs/current" ]; then
+            yes | pebble sdk install latest
+          fi
+          pebble build
 
       - name: Verify .pbw output
         run: |
