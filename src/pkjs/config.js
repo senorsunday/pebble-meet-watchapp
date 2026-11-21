@@ -1,6 +1,20 @@
 /* Pebble Clay Configuration Schema for PebbleMeet
  * Opens automatically in the Pebble phone app under PebbleMeet -> Settings.
+ * Supports Short Press (Tap), Double Press (2x Tap), and Long Press (Hold)
+ * across all 3 hardware buttons (Up, Select, Down).
  */
+var BUTTON_ACTIONS = [
+  { label: 'Toggle Mute', value: '0' },
+  { label: 'Push-to-Talk (Hold)', value: '1' },
+  { label: 'Toggle Camera', value: '2' },
+  { label: 'End Call', value: '3' },
+  { label: 'Raise / Lower Hand', value: '4' },
+  { label: 'Chat & Replies (Dictation)', value: '5' },
+  { label: 'Quick Reaction', value: '9' },
+  { label: 'Toggle PTT Mode', value: '10' },
+  { label: 'Disabled', value: '11' },
+];
+
 module.exports = [
   {
     type: 'heading',
@@ -55,46 +69,129 @@ module.exports = [
   {
     type: 'section',
     items: [
-      { type: 'heading', defaultValue: 'In-Call Button Actions' },
+      { type: 'heading', defaultValue: 'Up Button Actions' },
       {
         type: 'select',
         messageKey: 'CFG_UP_SHORT',
-        label: 'Up Button (Tap)',
+        label: 'Short Press (Tap)',
         defaultValue: '0',
-        options: [
-          { label: 'Toggle Mute', value: '0' },
-          { label: 'Push-to-Talk (Hold)', value: '1' },
-          { label: 'Toggle Camera', value: '2' },
-          { label: 'End Call', value: '3' },
-          { label: 'Raise Hand', value: '4' },
-          { label: 'Chat & Replies', value: '5' },
-          { label: 'Toggle PTT Mode', value: '10' },
-        ],
+        options: BUTTON_ACTIONS,
       },
+      {
+        type: 'select',
+        messageKey: 'CFG_UP_DOUBLE',
+        label: 'Double Press (2x Tap)',
+        defaultValue: '10',
+        description: 'Set to Disabled for instant single-tap response.',
+        options: BUTTON_ACTIONS,
+      },
+      {
+        type: 'select',
+        messageKey: 'CFG_UP_LONG',
+        label: 'Long Press (Hold)',
+        defaultValue: '4',
+        options: BUTTON_ACTIONS,
+      },
+    ],
+  },
+  {
+    type: 'section',
+    items: [
+      { type: 'heading', defaultValue: 'Select Button Actions' },
       {
         type: 'select',
         messageKey: 'CFG_SELECT_SHORT',
-        label: 'Select Button (Tap)',
+        label: 'Short Press (Tap)',
         defaultValue: '3',
-        options: [
-          { label: 'End Call', value: '3' },
-          { label: 'Toggle Mute', value: '0' },
-          { label: 'Push-to-Talk (Hold)', value: '1' },
-          { label: 'Toggle Camera', value: '2' },
-          { label: 'Raise Hand', value: '4' },
-        ],
+        options: BUTTON_ACTIONS,
       },
       {
         type: 'select',
+        messageKey: 'CFG_SELECT_DOUBLE',
+        label: 'Double Press (2x Tap)',
+        defaultValue: '9',
+        description: 'Set to Disabled for instant single-tap response.',
+        options: BUTTON_ACTIONS,
+      },
+      {
+        type: 'select',
+        messageKey: 'CFG_SELECT_LONG',
+        label: 'Long Press (Hold)',
+        defaultValue: '11',
+        options: BUTTON_ACTIONS,
+      },
+    ],
+  },
+  {
+    type: 'section',
+    items: [
+      { type: 'heading', defaultValue: 'Down Button Actions' },
+      {
+        type: 'select',
         messageKey: 'CFG_DOWN_SHORT',
-        label: 'Down Button (Tap)',
+        label: 'Short Press (Tap)',
         defaultValue: '2',
+        options: BUTTON_ACTIONS,
+      },
+      {
+        type: 'select',
+        messageKey: 'CFG_DOWN_DOUBLE',
+        label: 'Double Press (2x Tap)',
+        defaultValue: '11',
+        description: 'Set to Disabled for instant single-tap response.',
+        options: BUTTON_ACTIONS,
+      },
+      {
+        type: 'select',
+        messageKey: 'CFG_DOWN_LONG',
+        label: 'Long Press (Hold)',
+        defaultValue: '5',
+        options: BUTTON_ACTIONS,
+      },
+    ],
+  },
+  {
+    type: 'section',
+    items: [
+      { type: 'heading', defaultValue: 'Watch Info & Alert Banners' },
+      {
+        type: 'toggle',
+        messageKey: 'CFG_SHOW_CAPTIONS',
+        label: 'Live Captions (CC) Ticker',
+        description: 'Show recent Google Meet captions on your watch when CC is on.',
+        defaultValue: true,
+      },
+      {
+        type: 'toggle',
+        messageKey: 'CFG_ALERT_CHAT',
+        label: 'Incoming Meet Chat Banners',
+        description: 'Vibrate and show a banner when Meet chat arrives (Back to dismiss).',
+        defaultValue: true,
+      },
+      {
+        type: 'toggle',
+        messageKey: 'CFG_ALERT_RECORDING',
+        label: 'Recording & Note-Taking Banners',
+        description: 'Alert your wrist whenever Meet recording starts (Back to dismiss).',
+        defaultValue: true,
+      },
+      {
+        type: 'toggle',
+        messageKey: 'CFG_ALERT_LOBBY',
+        label: 'Waiting Room / Lobby Knock Banners',
+        description: 'Alert when a guest knocks (Select to admit, Back to dismiss).',
+        defaultValue: true,
+      },
+      {
+        type: 'select',
+        messageKey: 'CFG_WRAP_UP_MINUTES',
+        label: 'Meeting Wrap-Up Reminder',
+        defaultValue: '5',
+        description: 'Gentle wrist buzz before your scheduled meeting ends.',
         options: [
-          { label: 'Toggle Camera', value: '2' },
-          { label: 'Chat & Replies', value: '5' },
-          { label: 'Raise Hand', value: '4' },
-          { label: 'Toggle PTT Mode', value: '10' },
-          { label: 'End Call', value: '3' },
+          { label: 'Off', value: '0' },
+          { label: '1 minute before', value: '1' },
+          { label: '5 minutes before', value: '5' },
         ],
       },
     ],

@@ -10,6 +10,19 @@ var clay = new Clay(clayConfig, null, { autoHandleEvents: false });
 var BRIDGE_WS_URL = localStorage.getItem('pebblemeet_bridge_url') || 'ws://localhost:8765';
 var bridgeSocket = null;
 var googleAccessToken = localStorage.getItem('pebblemeet_access_token') || '';
+var bannerPrefs = (function () {
+  try {
+    var saved = JSON.parse(localStorage.getItem('pebblemeet_banner_prefs') || 'null');
+    if (saved && typeof saved === 'object') return saved;
+  } catch (e) {}
+  return {
+    showCaptions: true,
+    alertChat: true,
+    alertRecording: true,
+    alertLobby: true,
+    wrapUpMinutes: 5,
+  };
+})();
 
 function connectBridge() {
   if (bridgeSocket) {
@@ -29,7 +42,14 @@ function connectBridge() {
         });
       }
       if (msg.type === 'MEET_ALERT' && msg.body) {
+        var kindMap = { chat: 1, recording: 2, lobby: 3, wrap_up: 4 };
+        var kindCode = kindMap[msg.kind] || 0;
+        if (kindCode === 1 && !bannerPrefs.alertChat) return;
+        if (kindCode === 2 && !bannerPrefs.alertRecording) return;
+        if (kindCode === 3 && !bannerPrefs.alertLobby) return;
+        if (kindCode === 4 && bannerPrefs.wrapUpMinutes === 0) return;
         Pebble.sendAppMessage({
+          EVT_BANNER_KIND: kindCode,
           EVT_BANNER_BODY: String(msg.body).slice(0, 60),
         });
       }
@@ -131,6 +151,23 @@ Pebble.addEventListener('showConfiguration', function () {
   Pebble.openURL(clay.generateUrl());
 });
 
+function readActionSetting(settings, key, fallback) {
+  var entry = settings[key];
+  if (!entry || entry.value === undefined || entry.value === null || entry.value === '') {
+    return fallback;
+  }
+  var parsed = parseInt(entry.value, 10);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+function readToggleSetting(settings, key, fallback) {
+  var entry = settings[key];
+  if (!entry || entry.value === undefined || entry.value === null) {
+    return fallback ? 1 : 0;
+  }
+  return entry.value ? 1 : 0;
+}
+
 Pebble.addEventListener('webviewclosed', function (e) {
   if (!e || !e.response) return;
   var rawSettings = clay.getSettings(e.response, false);
@@ -144,13 +181,39 @@ Pebble.addEventListener('webviewclosed', function (e) {
     connectBridge();
   }
 
+  var showCaptions = readToggleSetting(rawSettings, 'CFG_SHOW_CAPTIONS', true);
+  var alertChat = readToggleSetting(rawSettings, 'CFG_ALERT_CHAT', true);
+  var alertRecording = readToggleSetting(rawSettings, 'CFG_ALERT_RECORDING', true);
+  var alertLobby = readToggleSetting(rawSettings, 'CFG_ALERT_LOBBY', true);
+  var wrapUpMinutes = readActionSetting(rawSettings, 'CFG_WRAP_UP_MINUTES', 5);
+
+  bannerPrefs = {
+    showCaptions: showCaptions === 1,
+    alertChat: alertChat === 1,
+    alertRecording: alertRecording === 1,
+    alertLobby: alertLobby === 1,
+    wrapUpMinutes: wrapUpMinutes,
+  };
+  localStorage.setItem('pebblemeet_banner_prefs', JSON.stringify(bannerPrefs));
+
   var watchPayload = {
-    CFG_DEFAULT_PTT: rawSettings.CFG_DEFAULT_PTT && rawSettings.CFG_DEFAULT_PTT.value ? 1 : 0,
-    CFG_JOIN_MUTED: rawSettings.CFG_JOIN_MUTED && rawSettings.CFG_JOIN_MUTED.value ? 1 : 0,
-    CFG_JOIN_CAM_OFF: rawSettings.CFG_JOIN_CAM_OFF && rawSettings.CFG_JOIN_CAM_OFF.value ? 1 : 0,
-    CFG_UP_SHORT: parseInt((rawSettings.CFG_UP_SHORT && rawSettings.CFG_UP_SHORT.value) || '0', 10),
-    CFG_SELECT_SHORT: parseInt((rawSettings.CFG_SELECT_SHORT && rawSettings.CFG_SELECT_SHORT.value) || '3', 10),
-    CFG_DOWN_SHORT: parseInt((rawSettings.CFG_DOWN_SHORT && rawSettings.CFG_DOWN_SHORT.value) || '2', 10),
+    CFG_DEFAULT_PTT: readToggleSetting(rawSettings, 'CFG_DEFAULT_PTT', false),
+    CFG_JOIN_MUTED: readToggleSetting(rawSettings, 'CFG_JOIN_MUTED', false),
+    CFG_JOIN_CAM_OFF: readToggleSetting(rawSettings, 'CFG_JOIN_CAM_OFF', false),
+    CFG_UP_SHORT: readActionSetting(rawSettings, 'CFG_UP_SHORT', 0),
+    CFG_UP_DOUBLE: readActionSetting(rawSettings, 'CFG_UP_DOUBLE', 10),
+    CFG_UP_LONG: readActionSetting(rawSettings, 'CFG_UP_LONG', 4),
+    CFG_SELECT_SHORT: readActionSetting(rawSettings, 'CFG_SELECT_SHORT', 3),
+    CFG_SELECT_DOUBLE: readActionSetting(rawSettings, 'CFG_SELECT_DOUBLE', 9),
+    CFG_SELECT_LONG: readActionSetting(rawSettings, 'CFG_SELECT_LONG', 11),
+    CFG_DOWN_SHORT: readActionSetting(rawSettings, 'CFG_DOWN_SHORT', 2),
+    CFG_DOWN_DOUBLE: readActionSetting(rawSettings, 'CFG_DOWN_DOUBLE', 11),
+    CFG_DOWN_LONG: readActionSetting(rawSettings, 'CFG_DOWN_LONG', 5),
+    CFG_SHOW_CAPTIONS: showCaptions,
+    CFG_ALERT_CHAT: alertChat,
+    CFG_ALERT_RECORDING: alertRecording,
+    CFG_ALERT_LOBBY: alertLobby,
+    CFG_WRAP_UP_MINUTES: wrapUpMinutes,
   };
 
   Pebble.sendAppMessage(watchPayload, function () {

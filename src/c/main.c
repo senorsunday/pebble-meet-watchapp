@@ -68,7 +68,7 @@ static bool s_is_recording = false;
 static bool s_banner_visible = false;
 static char s_banner_body[64] = "";
 
-#define PERSIST_KEY_CONFIG 1
+#define PERSIST_KEY_CONFIG 3
 
 typedef enum {
   ACT_TOGGLE_MUTE = 0,
@@ -85,16 +85,32 @@ typedef enum {
   ACT_NONE = 11
 } WatchButtonAction;
 
+typedef enum {
+  BANNER_KIND_GENERIC = 0,
+  BANNER_KIND_CHAT = 1,
+  BANNER_KIND_RECORDING = 2,
+  BANNER_KIND_LOBBY = 3,
+  BANNER_KIND_WRAP_UP = 4
+} WatchBannerKind;
+
 typedef struct {
   bool default_ptt;
   bool join_muted;
   bool join_cam_off;
   uint8_t up_short;
+  uint8_t up_double;
   uint8_t up_long;
   uint8_t select_short;
+  uint8_t select_double;
   uint8_t select_long;
   uint8_t down_short;
+  uint8_t down_double;
   uint8_t down_long;
+  bool show_captions;
+  bool alert_chat;
+  bool alert_recording;
+  bool alert_lobby;
+  uint8_t wrap_up_minutes;
 } PebbleMeetConfig;
 
 static PebbleMeetConfig s_cfg = {
@@ -102,11 +118,19 @@ static PebbleMeetConfig s_cfg = {
   .join_muted = false,
   .join_cam_off = false,
   .up_short = ACT_TOGGLE_MUTE,
+  .up_double = ACT_TOGGLE_PTT_MODE,
   .up_long = ACT_RAISE_HAND,
   .select_short = ACT_END_CALL,
-  .select_long = ACT_OPEN_NOTES,
+  .select_double = ACT_SEND_REACTION,
+  .select_long = ACT_NONE,
   .down_short = ACT_TOGGLE_CAMERA,
+  .down_double = ACT_NONE,
   .down_long = ACT_OPEN_CHAT,
+  .show_captions = true,
+  .alert_chat = true,
+  .alert_recording = true,
+  .alert_lobby = true,
+  .wrap_up_minutes = 5,
 };
 
 static char s_active_callee[NAME_LEN] = "";
@@ -235,6 +259,12 @@ static void execute_watch_action(WatchButtonAction action) {
 #endif
       send_chat_message("On mute, listening in from Pebble");
       break;
+    case ACT_PUSH_TO_TALK:
+      s_ptt_mode = !s_ptt_mode;
+      if (s_ptt_mode) s_is_muted = true;
+      vibes_short_pulse();
+      update_call_ui();
+      break;
     case ACT_TOGGLE_PTT_MODE:
       s_ptt_mode = !s_ptt_mode;
       if (s_ptt_mode) s_is_muted = true;
@@ -250,6 +280,28 @@ static void execute_watch_action(WatchButtonAction action) {
   }
 }
 
+static bool is_ptt_hold_button(ButtonId btn, WatchButtonAction long_action) {
+  return long_action == ACT_PUSH_TO_TALK || (btn == BUTTON_ID_UP && s_ptt_mode);
+}
+
+static void handle_long_press_down(ButtonId btn, WatchButtonAction long_action) {
+  if (is_ptt_hold_button(btn, long_action)) {
+    s_is_muted = false;
+    send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 0);
+    update_call_ui();
+    return;
+  }
+  execute_watch_action(long_action);
+}
+
+static void handle_long_press_up(ButtonId btn, WatchButtonAction long_action) {
+  if (is_ptt_hold_button(btn, long_action)) {
+    s_is_muted = true;
+    send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 1);
+    update_call_ui();
+  }
+}
+
 static void call_back_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   if (s_banner_visible) {
     s_banner_visible = false;
@@ -260,29 +312,27 @@ static void call_back_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   window_stack_pop(true);
 }
 
-static void call_up_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+static void call_up_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+  if (s_cfg.up_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
+    execute_watch_action((WatchButtonAction)s_cfg.up_double);
+    return;
+  }
   execute_watch_action((WatchButtonAction)s_cfg.up_short);
 }
 
 static void call_up_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
-  if (s_ptt_mode) {
-    s_is_muted = false;
-    send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 0);
-    update_call_ui();
-    return;
-  }
-  execute_watch_action((WatchButtonAction)s_cfg.up_long);
+  handle_long_press_down(BUTTON_ID_UP, (WatchButtonAction)s_cfg.up_long);
 }
 
 static void call_up_long_release_handler(ClickRecognizerRef recognizer, void *ctx) {
-  if (s_ptt_mode) {
-    s_is_muted = true;
-    send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 1);
-    update_call_ui();
-  }
+  handle_long_press_up(BUTTON_ID_UP, (WatchButtonAction)s_cfg.up_long);
 }
 
-static void call_select_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+static void call_select_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+  if (s_cfg.select_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
+    execute_watch_action((WatchButtonAction)s_cfg.select_double);
+    return;
+  }
   if (s_banner_visible) {
     s_banner_visible = false;
     send_int_command(MESSAGE_KEY_CMD_ADMIT_GUEST, 1);
@@ -293,27 +343,58 @@ static void call_select_click_handler(ClickRecognizerRef recognizer, void *ctx) 
 }
 
 static void call_select_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
-  execute_watch_action((WatchButtonAction)s_cfg.select_long);
+  handle_long_press_down(BUTTON_ID_SELECT, (WatchButtonAction)s_cfg.select_long);
 }
 
-static void call_down_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+static void call_select_long_release_handler(ClickRecognizerRef recognizer, void *ctx) {
+  handle_long_press_up(BUTTON_ID_SELECT, (WatchButtonAction)s_cfg.select_long);
+}
+
+static void call_down_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
+  if (s_cfg.down_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
+    execute_watch_action((WatchButtonAction)s_cfg.down_double);
+    return;
+  }
   execute_watch_action((WatchButtonAction)s_cfg.down_short);
 }
 
 static void call_down_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
-  execute_watch_action((WatchButtonAction)s_cfg.down_long);
+  handle_long_press_down(BUTTON_ID_DOWN, (WatchButtonAction)s_cfg.down_long);
+}
+
+static void call_down_long_release_handler(ClickRecognizerRef recognizer, void *ctx) {
+  handle_long_press_up(BUTTON_ID_DOWN, (WatchButtonAction)s_cfg.down_long);
 }
 
 static void call_click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_BACK, call_back_click_handler);
-  window_single_click_subscribe(BUTTON_ID_UP, call_up_click_handler);
+
+  if (s_cfg.up_double != ACT_NONE) {
+    window_multi_click_subscribe(BUTTON_ID_UP, 1, 2, 280, true, call_up_multi_click_handler);
+  } else {
+    window_single_click_subscribe(BUTTON_ID_UP, call_up_multi_click_handler);
+  }
   window_long_click_subscribe(
     BUTTON_ID_UP, 350, call_up_long_click_handler, call_up_long_release_handler
   );
-  window_single_click_subscribe(BUTTON_ID_SELECT, call_select_click_handler);
-  window_long_click_subscribe(BUTTON_ID_SELECT, 500, call_select_long_click_handler, NULL);
-  window_single_click_subscribe(BUTTON_ID_DOWN, call_down_click_handler);
-  window_long_click_subscribe(BUTTON_ID_DOWN, 500, call_down_long_click_handler, NULL);
+
+  if (s_cfg.select_double != ACT_NONE) {
+    window_multi_click_subscribe(BUTTON_ID_SELECT, 1, 2, 280, true, call_select_multi_click_handler);
+  } else {
+    window_single_click_subscribe(BUTTON_ID_SELECT, call_select_multi_click_handler);
+  }
+  window_long_click_subscribe(
+    BUTTON_ID_SELECT, 450, call_select_long_click_handler, call_select_long_release_handler
+  );
+
+  if (s_cfg.down_double != ACT_NONE) {
+    window_multi_click_subscribe(BUTTON_ID_DOWN, 1, 2, 280, true, call_down_multi_click_handler);
+  } else {
+    window_single_click_subscribe(BUTTON_ID_DOWN, call_down_multi_click_handler);
+  }
+  window_long_click_subscribe(
+    BUTTON_ID_DOWN, 450, call_down_long_click_handler, call_down_long_release_handler
+  );
 }
 
 static void call_window_load(Window *window) {
@@ -370,6 +451,7 @@ static void call_window_load(Window *window) {
 
 static void call_window_unload(Window *window) {
   action_bar_layer_destroy(s_action_bar);
+  s_action_bar = NULL;
   text_layer_destroy(s_callee_layer);
   text_layer_destroy(s_timer_layer);
   text_layer_destroy(s_speaker_layer);
@@ -664,7 +746,13 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
 
   Tuple *rec_t = dict_find(iter, MESSAGE_KEY_SYNC_RECORDING);
   if (rec_t) {
-    s_is_recording = rec_t->value->int32 == 1;
+    bool next_rec = rec_t->value->int32 == 1;
+    if (next_rec && !s_is_recording && s_cfg.alert_recording) {
+      snprintf(s_banner_body, sizeof(s_banner_body), "Recording started (BACK)");
+      s_banner_visible = true;
+      vibes_short_pulse();
+    }
+    s_is_recording = next_rec;
     update_call_ui();
   }
 
@@ -690,9 +778,29 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
     s_cfg.up_short = (uint8_t)cfg_up->value->int32;
     cfg_changed = true;
   }
+  Tuple *cfg_up_dbl = dict_find(iter, MESSAGE_KEY_CFG_UP_DOUBLE);
+  if (cfg_up_dbl) {
+    s_cfg.up_double = (uint8_t)cfg_up_dbl->value->int32;
+    cfg_changed = true;
+  }
+  Tuple *cfg_up_lng = dict_find(iter, MESSAGE_KEY_CFG_UP_LONG);
+  if (cfg_up_lng) {
+    s_cfg.up_long = (uint8_t)cfg_up_lng->value->int32;
+    cfg_changed = true;
+  }
   Tuple *cfg_sel = dict_find(iter, MESSAGE_KEY_CFG_SELECT_SHORT);
   if (cfg_sel) {
     s_cfg.select_short = (uint8_t)cfg_sel->value->int32;
+    cfg_changed = true;
+  }
+  Tuple *cfg_sel_dbl = dict_find(iter, MESSAGE_KEY_CFG_SELECT_DOUBLE);
+  if (cfg_sel_dbl) {
+    s_cfg.select_double = (uint8_t)cfg_sel_dbl->value->int32;
+    cfg_changed = true;
+  }
+  Tuple *cfg_sel_lng = dict_find(iter, MESSAGE_KEY_CFG_SELECT_LONG);
+  if (cfg_sel_lng) {
+    s_cfg.select_long = (uint8_t)cfg_sel_lng->value->int32;
     cfg_changed = true;
   }
   Tuple *cfg_dn = dict_find(iter, MESSAGE_KEY_CFG_DOWN_SHORT);
@@ -700,17 +808,64 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
     s_cfg.down_short = (uint8_t)cfg_dn->value->int32;
     cfg_changed = true;
   }
+  Tuple *cfg_dn_dbl = dict_find(iter, MESSAGE_KEY_CFG_DOWN_DOUBLE);
+  if (cfg_dn_dbl) {
+    s_cfg.down_double = (uint8_t)cfg_dn_dbl->value->int32;
+    cfg_changed = true;
+  }
+  Tuple *cfg_dn_lng = dict_find(iter, MESSAGE_KEY_CFG_DOWN_LONG);
+  if (cfg_dn_lng) {
+    s_cfg.down_long = (uint8_t)cfg_dn_lng->value->int32;
+    cfg_changed = true;
+  }
+  Tuple *cfg_cap = dict_find(iter, MESSAGE_KEY_CFG_SHOW_CAPTIONS);
+  if (cfg_cap) {
+    s_cfg.show_captions = cfg_cap->value->int32 == 1;
+    cfg_changed = true;
+  }
+  Tuple *cfg_chat = dict_find(iter, MESSAGE_KEY_CFG_ALERT_CHAT);
+  if (cfg_chat) {
+    s_cfg.alert_chat = cfg_chat->value->int32 == 1;
+    cfg_changed = true;
+  }
+  Tuple *cfg_rec = dict_find(iter, MESSAGE_KEY_CFG_ALERT_RECORDING);
+  if (cfg_rec) {
+    s_cfg.alert_recording = cfg_rec->value->int32 == 1;
+    cfg_changed = true;
+  }
+  Tuple *cfg_lobby = dict_find(iter, MESSAGE_KEY_CFG_ALERT_LOBBY);
+  if (cfg_lobby) {
+    s_cfg.alert_lobby = cfg_lobby->value->int32 == 1;
+    cfg_changed = true;
+  }
+  Tuple *cfg_wrap = dict_find(iter, MESSAGE_KEY_CFG_WRAP_UP_MINUTES);
+  if (cfg_wrap) {
+    s_cfg.wrap_up_minutes = (uint8_t)cfg_wrap->value->int32;
+    cfg_changed = true;
+  }
   if (cfg_changed) {
     persist_write_data(PERSIST_KEY_CONFIG, &s_cfg, sizeof(s_cfg));
+    if (s_call_window && window_is_loaded(s_call_window) && s_action_bar) {
+      action_bar_layer_set_click_config_provider(s_action_bar, call_click_config_provider);
+    }
     update_call_ui();
   }
 
   Tuple *banner_t = dict_find(iter, MESSAGE_KEY_EVT_BANNER_BODY);
   if (banner_t) {
-    snprintf(s_banner_body, sizeof(s_banner_body), "%s", banner_t->value->cstring);
-    s_banner_visible = true;
-    vibes_short_pulse();
-    update_call_ui();
+    Tuple *kind_t = dict_find(iter, MESSAGE_KEY_EVT_BANNER_KIND);
+    int kind = kind_t ? (int)kind_t->value->int32 : BANNER_KIND_GENERIC;
+    bool allowed = true;
+    if (kind == BANNER_KIND_CHAT && !s_cfg.alert_chat) allowed = false;
+    if (kind == BANNER_KIND_RECORDING && !s_cfg.alert_recording) allowed = false;
+    if (kind == BANNER_KIND_LOBBY && !s_cfg.alert_lobby) allowed = false;
+    if (kind == BANNER_KIND_WRAP_UP && s_cfg.wrap_up_minutes == 0) allowed = false;
+    if (allowed) {
+      snprintf(s_banner_body, sizeof(s_banner_body), "%s", banner_t->value->cstring);
+      s_banner_visible = true;
+      vibes_short_pulse();
+      update_call_ui();
+    }
   }
 }
 
