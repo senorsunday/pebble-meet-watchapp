@@ -1,0 +1,12 @@
+name = "pebble-meet-watchapp-oauth"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+CONFIG_PAGE_URL = "https://senorsunday.github.io/pebble-meet-watchapp/config/"
+ALLOWED_ORIGINS = "https://senorsunday.github.io"
+
+# Do NOT put secrets here. Set them with Wrangler CLI:
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#   npx wrangler secret put STATE_SIGNING_SECRET

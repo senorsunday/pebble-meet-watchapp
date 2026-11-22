@@ -1,0 +1,13 @@
+{
+  "name": "pebble-meet-watchapp-oauth",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Cloudflare Worker OAuth 2.0 relay for PebbleMeet Pebble watchapp",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.99.0"
+  }
+}
