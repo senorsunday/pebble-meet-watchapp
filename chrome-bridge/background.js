@@ -315,7 +315,7 @@ async function connectBridge(forceReconnect = false) {
   });
 
   ws.addEventListener('error', () => {
-    try { ws?.close(); } catch {}
+    try { if (ws) ws.close(); } catch (e) {}
   });
 }
 

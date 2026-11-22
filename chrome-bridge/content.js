@@ -111,7 +111,10 @@
 
   function getParticipantCount() {
     const peopleBtn = findControlByLabels(['people', 'show everyone']);
-    const text = peopleBtn?.parentElement?.textContent || peopleBtn?.textContent || '';
+    const text =
+      (peopleBtn && peopleBtn.parentElement && peopleBtn.parentElement.textContent) ||
+      (peopleBtn && peopleBtn.textContent) ||
+      '';
     const match = text.match(/\d+/);
     return match ? Number(match[0]) : 1;
   }
@@ -121,8 +124,8 @@
     const speakingTile = document.querySelector('[data-self-name], [data-participant-id] [data-tooltip]');
     if (!muted) return 'You';
     const nameEl =
-      speakingTile?.getAttribute?.('data-self-name') ||
-      speakingTile?.textContent?.trim() ||
+      (speakingTile && speakingTile.getAttribute && speakingTile.getAttribute('data-self-name')) ||
+      (speakingTile && speakingTile.textContent && speakingTile.textContent.trim()) ||
       '';
     if (nameEl && nameEl.length <= 28) return nameEl;
     return 'In Call';
@@ -187,7 +190,7 @@
     if (now - lastLobbyAlertAt < 15000) return;
     lastLobbyAlertAt = now;
     const dialog = admitBtn.closest('[role="dialog"], [role="alertdialog"], div');
-    const raw = (dialog?.textContent || '').replace(/\s+/g, ' ').trim();
+    const raw = ((dialog && dialog.textContent) || '').replace(/\s+/g, ' ').trim();
     const body = raw.length > 5 ? raw.slice(0, 58) : 'Guest waiting (SEL: Admit)';
     sendMessage({
       type: 'MEET_ALERT',
@@ -231,7 +234,8 @@
       input.tagName === 'TEXTAREA'
         ? window.HTMLTextAreaElement.prototype
         : window.HTMLInputElement.prototype;
-    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    const setter = desc && desc.set;
     if (setter) {
       setter.call(input, value);
     } else {
@@ -485,13 +489,15 @@
     }
 
     if (data.cmd === 'ADMIT_GUEST') {
-      findButtonByText(['admit'])?.click();
+      const admitBtn = findButtonByText(['admit']);
+      if (admitBtn) admitBtn.click();
       sendResponse({ ok: true });
       return false;
     }
 
     if (data.cmd === 'END_CALL') {
-      findControlByLabels(['leave call'])?.click();
+      const leaveBtn = findControlByLabels(['leave call']);
+      if (leaveBtn) leaveBtn.click();
       sendResponse({ ok: true });
       return false;
     }
