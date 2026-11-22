@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PebbleMeet Bridge (Firefox)</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        max-width: 380px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f6f7f9;
+        color: #111318;
+        font-size: 13px;
+      }
+      header {
+        background: #111318;
+        color: #fff;
+        padding: 12px 14px;
+      }
+      header h1 { margin: 0; font-size: 15px; }
+      header p { margin: 2px 0 0; font-size: 11px; color: #cbd5e1; }
+      main {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #dfe3ea;
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #525e70;
+      }
+      .code-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .code-box {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #ea580c;
+      }
+      .btn-row { display: flex; gap: 6px; }
+      button {
+        border: 0;
+        border-radius: 7px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #eef2f6;
+        color: #111318;
+      }
+      button.primary { background: #ea580c; color: #fff; }
+      button.danger { background: #fee2e2; color: #b91c1c; padding: 4px 8px; }
+      .status-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+      .status-item { display: flex; align-items: center; gap: 6px; }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        flex: 0 0 auto;
+      }
+      .dot.ok { background: #16a34a; }
+      .dot.warn { background: #f59e0b; }
+      .contact-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 8px;
+        max-height: 140px;
+        overflow-y: auto;
+      }
+      .contact-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 6px 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 7px;
+      }
+      .contact-info { min-width: 0; }
+      .contact-name {
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .contact-email {
+        font-size: 11px;
+        color: #525e70;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .form-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+      input[type="text"], input[type="email"], input[type="url"] {
+        width: 100%;
+        padding: 7px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        font-size: 12px;
+      }
+      details summary {
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        color: #525e70;
+      }
+      .hint { font-size: 11px; color: #525e70; margin-top: 4px; }
+      .toast { font-size: 11px; color: #166534; min-height: 15px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>PebbleMeet Bridge (Firefox)</h1>
+      <p>Works on Firefox Desktop &amp; Firefox for Android / IronFox</p>
+    </header>
+    <main>
+      <section class="card">
+        <h2>Watch Pairing Code</h2>
+        <div class="code-row">
+          <div id="pairing-code" class="code-box">---</div>
+          <div class="btn-row">
+            <button id="btn-copy" type="button">Copy</button>
+            <button id="btn-regen" type="button">New</button>
+          </div>
+        </div>
+        <div class="hint">
+          Enter this code in PebbleMeet Settings on your phone. On Firefox for Android, enable <strong>Desktop site</strong> on meet.google.com.
+        </div>
+        <div class="status-list">
+          <div class="status-item">
+            <span id="dot-relay" class="dot"></span>
+            <span id="lbl-relay">Relay: Connecting...</span>
+          </div>
+          <div class="status-item">
+            <span id="dot-pebble" class="dot"></span>
+            <span id="lbl-pebble">Pebble Watch: Waiting...</span>
+          </div>
+          <div class="status-item">
+            <span id="dot-meet" class="dot"></span>
+            <span id="lbl-meet">Google Meet: No active tab</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Quick Contacts (Synced to Watch)</h2>
+        <div id="contact-list" class="contact-list"></div>
+        <div class="form-grid">
+          <input id="input-name" type="text" placeholder="Name (e.g. Alex Palson)" maxlength="30" />
+          <input id="input-email" type="email" placeholder="Email (e.g. alex@company.com)" maxlength="46" />
+          <input id="input-role" type="text" placeholder="Label / Role (optional)" maxlength="26" />
+          <button id="btn-add-contact" class="primary" type="button">Add &amp; Sync to Watch</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary>Advanced: Relay URL &amp; Optional Self-Hosted OAuth</summary>
+          <div class="form-grid" style="margin-top: 8px">
+            <input id="input-relay" type="url" placeholder="https://pebble-meet-watchapp-oauth.apalson.workers.dev" />
+            <div class="btn-row">
+              <button id="btn-save-relay" type="button">Save Relay</button>
+              <button id="btn-browser-oauth" type="button">Sign in with Google</button>
+            </div>
+          </div>
+        </details>
+        <div id="toast" class="toast"></div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

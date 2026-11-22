@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PebbleMeet Companion</string>
+    <string name="accessibility_service_label">PebbleMeet Call Controller</string>
+    <string name="accessibility_service_description">Allows your Pebble smartwatch to toggle Mute, Camera, Raise Hand, Captions, Chat, Admit Guest, Invite Contacts, and Leave Call inside Vanadium, Firefox, Chrome, or the Google Meet app.</string>
+</resources>

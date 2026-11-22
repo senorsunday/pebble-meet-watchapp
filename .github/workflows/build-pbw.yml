@@ -1,4 +1,4 @@
-name: Build & Release Pebble .pbw
+name: Build & Release Pebble .pbw & Companions
 
 on:
   push:
@@ -25,11 +25,15 @@ jobs:
         run: |
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('chrome-bridge/manifest.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('firefox-bridge/manifest.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('appstore/store-listing.json','utf8'))"
           node --check src/pkjs/index.js
           node --check chrome-bridge/background.js
           node --check chrome-bridge/content.js
           node --check chrome-bridge/popup.js
+          node --check firefox-bridge/background.js
+          node --check firefox-bridge/content.js
+          node --check firefox-bridge/popup.js
 
       - name: Install PebbleKit JS dependencies
         run: npm install --no-audit --no-fund
@@ -59,12 +63,64 @@ jobs:
           name: pebble-meet-watchapp-pbw
           path: build/*.pbw
 
+  build-companions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Test & build Android Companion APK
+        working-directory: android-companion
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug
+
+      - name: Package companion release artifacts
+        run: |
+          VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
+          mkdir -p dist
+          cp android-companion/app/build/outputs/apk/debug/app-debug.apk "dist/pebble-meet-android-companion-v${VERSION}.apk"
+          (cd chrome-bridge && zip -r "../dist/pebble-meet-chrome-bridge-v${VERSION}.zip" .)
+          (cd firefox-bridge && zip -r "../dist/pebble-meet-firefox-bridge-v${VERSION}.zip" .)
+          ls -lh dist/
+
+      - name: Upload companion artifacts (Android APK + Chrome/Firefox bridges)
+        uses: actions/upload-artifact@v7
+        with:
+          name: pebble-meet-companions
+          path: dist/*
+
+  release:
+    needs: [build-pbw, build-companions]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download .pbw artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pebble-meet-watchapp-pbw
+          path: release-files
+
+      - name: Download companion artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pebble-meet-companions
+          path: release-files
+
       - name: Publish GitHub Release on version tag
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            build/*.pbw
+            release-files/*
             appstore/icon-48.png
             appstore/icon-144.png
             appstore/banner-720x320.png

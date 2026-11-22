@@ -254,7 +254,7 @@
       <div id="notice" class="notice" role="status" aria-live="polite"></div>
 
       <section class="card" aria-labelledby="sec-bridge">
-        <h2 id="sec-bridge">Chrome Extension Bridge (No Google Login Needed)</h2>
+        <h2 id="sec-bridge">Companion Bridge (Android, Chrome, or Firefox)</h2>
         <div class="field">
           <label for="PAIRING_CODE">6-Character Pairing Code</label>
           <input
@@ -266,17 +266,18 @@
             autocomplete="off"
           />
           <div class="hint">
-            Open the <strong>PebbleMeet Bridge</strong> Chrome Extension popup on your computer and enter the code shown there.
+            Open the <strong>PebbleMeet Companion</strong> Android app (for Vanadium / Meet app) or the <strong>Chrome / Firefox Bridge</strong> extension and enter the code shown there.
           </div>
           <div class="btn-row">
             <button type="button" id="btn-check-bridge" class="btn-secondary">Check Bridge Status</button>
+            <button type="button" id="btn-local-android" class="btn-secondary">Use Android Local Mode</button>
           </div>
         </div>
 
         <details>
           <summary>Advanced: Custom Relay URL &amp; Optional Private Calendar (.ics)</summary>
           <div class="field" style="margin-top: 10px">
-            <label for="RELAY_URL">Cloudflare Worker Relay URL</label>
+            <label for="RELAY_URL">Bridge Relay URL (Cloudflare or Local ws://127.0.0.1:8765)</label>
             <input
               id="RELAY_URL"
               type="url"
@@ -284,7 +285,7 @@
               placeholder="https://pebble-meet-watchapp-oauth.apalson.workers.dev"
             />
             <div class="hint">
-              Stateless Cloudflare Durable Object WebSocket relay connecting your phone and Chrome extension.
+              Use the Cloudflare Durable Object URL for 6-char pairing, or <code>ws://127.0.0.1:8765</code> for 100% offline local mode with the Android Companion app.
             </div>
           </div>
           <div class="field">
@@ -714,22 +715,32 @@
 
         document.getElementById('btn-check-bridge').addEventListener('click', function () {
           var s = collectFormSettings();
+          if (s.RELAY_URL.indexOf('ws://127.0.0.1') === 0 || s.RELAY_URL.indexOf('ws://localhost') === 0) {
+            showNotice('ok', 'Android Local Mode configured (' + s.RELAY_URL + '). Make sure Local-Only Mode & Bridge are ON in PebbleMeet Companion, then tap Save.');
+            return;
+          }
           if (!s.PAIRING_CODE || s.PAIRING_CODE.length < 6) {
-            showNotice('err', 'Enter your 6-character pairing code from the Chrome Extension first.');
+            showNotice('err', 'Enter your 6-character pairing code from the Companion app or Browser Extension first.');
             return;
           }
           fetch(s.RELAY_URL + '/bridge/status?room=' + encodeURIComponent(s.PAIRING_CODE))
             .then(function (r) { return r.json(); })
             .then(function (data) {
               if (data.chromeConnected) {
-                showNotice('ok', 'Chrome Extension is online for room ' + s.PAIRING_CODE + '. Tap Save to connect your watch.');
+                showNotice('ok', 'Bridge companion is online for room ' + s.PAIRING_CODE + '. Tap Save to connect your watch.');
               } else {
-                showNotice('warn', 'Relay reachable, but Chrome Extension is not online for ' + s.PAIRING_CODE + ' yet.');
+                showNotice('warn', 'Relay reachable, but companion/extension is not online for ' + s.PAIRING_CODE + ' yet.');
               }
             })
             .catch(function () {
               showNotice('err', 'Could not reach Relay URL (' + s.RELAY_URL + ').');
             });
+        });
+
+        document.getElementById('btn-local-android').addEventListener('click', function () {
+          document.getElementById('RELAY_URL').value = 'ws://127.0.0.1:8765';
+          document.getElementById('PAIRING_CODE').value = '';
+          showNotice('ok', 'Switched to Android Local Mode (ws://127.0.0.1:8765). Tap "Save to Pebble Watch" to apply.');
         });
 
         document.getElementById('btn-add-contact').addEventListener('click', function () {

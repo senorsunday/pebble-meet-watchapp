@@ -499,15 +499,23 @@ function fetchOptionalGoogleContacts() {
 /* -------------------------------------------------------------------------
  * Cloudflare Workers Durable Object WebSocket Bridge Client
  * ------------------------------------------------------------------------- */
+function isLocalWsRelay(url) {
+  return (
+    typeof url === 'string' &&
+    (url.indexOf('ws://127.0.0.1') === 0 || url.indexOf('ws://localhost') === 0)
+  );
+}
+
 function buildBridgeWsUrl() {
-  if (!pairingCode) return '';
   var base = (relayUrl || DEFAULT_RELAY_URL).trim().replace(/\/+$/, '');
+  var room = pairingCode || (isLocalWsRelay(base) ? 'LOCAL' : '');
+  if (!room) return '';
   if (base.indexOf('ws://') === 0 || base.indexOf('wss://') === 0) {
     var sep = base.indexOf('?') === -1 ? '?' : '&';
-    return base + sep + 'room=' + encodeURIComponent(pairingCode) + '&role=pebble';
+    return base + sep + 'room=' + encodeURIComponent(room) + '&role=pebble';
   }
   var wsBase = base.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
-  return wsBase + '/bridge/ws?room=' + encodeURIComponent(pairingCode) + '&role=pebble';
+  return wsBase + '/bridge/ws?room=' + encodeURIComponent(room) + '&role=pebble';
 }
 
 function sendToBridge(obj) {
@@ -521,7 +529,7 @@ function sendToBridge(obj) {
 }
 
 function scheduleBridgeReconnect() {
-  if (bridgeReconnectTimer || !pairingCode) return;
+  if (bridgeReconnectTimer || (!pairingCode && !isLocalWsRelay(relayUrl))) return;
   bridgeReconnectTimer = setTimeout(function () {
     bridgeReconnectTimer = null;
     connectBridge();

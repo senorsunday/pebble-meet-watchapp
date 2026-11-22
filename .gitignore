@@ -7,3 +7,8 @@ oauth-worker/.dev.vars
 *.pbw
 *.log
 .lock-waf_*
+android-companion/.gradle/
+android-companion/local.properties
+android-companion/app/build/
+android-companion/build/
+*.apk
