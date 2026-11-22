@@ -2,11 +2,11 @@
   "portalUrl": "https://dev-portal.rebble.io",
   "title": "PebbleMeet",
   "author": "Alex Palson",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "uuid": "5b7c8e90-4a12-4c9d-9f31-81a6e042f109",
   "category": "Remotes",
-  "sourceUrl": "https://github.com/your-github-username/pebble-meet-watchapp",
-  "websiteUrl": "https://github.com/your-github-username/pebble-meet-watchapp",
+  "sourceUrl": "https://github.com/senorsunday/pebble-meet-watchapp",
+  "websiteUrl": "https://github.com/senorsunday/pebble-meet-watchapp",
   "supportedHardware": [
     "aplite",
     "basalt",
@@ -17,8 +17,8 @@
   "capabilities": [
     "configurable"
   ],
-  "description": "PebbleMeet turns your Pebble smartwatch into a tactile Google Meet hardware controller.\n\nFeatures:\n- Browse upcoming Google Calendar meetings and Google Contacts right on your wrist\n- Join scheduled meetings or launch a new Google Meet room with one press\n- Physical ActionBar controls: Mic Mute / Push-to-Talk (UP), End Call (SELECT), Camera On/Off (DOWN)\n- Long-press actions for Raise Hand, Quick Chat / Pebble Mic Dictation, and Meeting Notes\n- Active call pinned first & highlighted when browsing back to the menu, with call-switch confirmation\n- Dismissible watch alerts (Lobby guests, Chat previews, Recording notices) using the BACK button\n- Full phone configuration via Pebble Clay (Push-to-Talk default, join muted/cam-off, full button remapping)\n- Native layouts for Pebble Classic (Aplite), Pebble Time (Basalt), Pebble Time Round (Chalk), Pebble 2 (Diorite), and Pebble Time 2 (Emery)\n\nCompanion Chrome Bridge & source code: https://github.com/your-github-username/pebble-meet-watchapp",
-  "releaseNotes": "Initial Pebble Appstore release v0.0.1: Google Calendar & Contacts menu, ActionBar call controls (Mute/PTT, End Call, Camera), Raise Hand, Pebble Mic Dictation chat, active call menu pinning, call-switch confirmation, BACK-dismissible alert banners, Pebble Clay settings, and Pebble Time Round support.",
+  "description": "PebbleMeet turns your Pebble smartwatch into a tactile Google Meet hardware controller—with zero local server and zero Google OAuth setup required.\n\nFeatures:\n- Instant 6-character pairing code bridge between Pebble and Chrome (works over Wi-Fi, VPN, and cellular)\n- One-press New Google Meet launcher and live sync of open Meet tabs\n- Quick Contacts: start a Meet room and automatically invite/ring contacts, or invite them into your current call\n- Physical ActionBar controls: instant Mute/Push-to-Talk (UP), Toggle PTT / Long-press End Call (SELECT), Camera On/Off (DOWN)\n- Raise/Lower Hand, Live Captions (CC) ticker, and Pebble Mic Dictation chat\n- Active call pinned first when browsing back to the menu, with call-switch & hang-up confirmation\n- Dismissible watch alerts (Lobby knocks with SELECT to admit, Chat previews, Recording notices)\n- Optional private Calendar (.ics) feed support with wrap-up reminders\n- Native layouts for Pebble Classic (Aplite), Pebble Time (Basalt), Pebble Time Round (Chalk), Pebble 2 (Diorite), and Pebble Time 2 (Emery)\n\nCompanion Chrome Bridge & source code: https://github.com/senorsunday/pebble-meet-watchapp",
+  "releaseNotes": "v0.2.0: Cloudflare Durable Objects Phone <-> Chrome bridge with 6-char pairing code, automated contact inviting/ringing in Google Meet, zero-OAuth Quick Contacts & optional .ics calendar feed, conflict-free PTT button defaults (fixes Issue #1), hang-up confirmation, live captions ticker, and battery/AppMessage reliability fixes.",
   "assets": {
     "smallIcon": "appstore/icon-48.png",
     "largeIcon": "appstore/icon-144.png",

@@ -6,3 +6,4 @@ oauth-worker/.dev.vars
 .DS_Store
 *.pbw
 *.log
+.lock-waf_*

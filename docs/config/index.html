@@ -3,27 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>PebbleMeet Watch Settings</title>
+    <title>PebbleMeet — Watch Settings</title>
     <style>
       :root {
-        --bg: #f4f6f9;
+        --bg: #f6f7f9;
         --card: #ffffff;
-        --border: #dde3ec;
         --ink: #111318;
         --muted: #525e70;
+        --border: #dfe3ea;
         --accent: #ea580c;
         --accent-dark: #c2410c;
-        --ok-bg: #f0fdf4;
-        --ok-border: #bbf7d0;
-        --ok-ink: #15803d;
+        --ok-bg: #ecfdf5;
+        --ok-border: #86efac;
+        --ok-ink: #166534;
+        --warn-bg: #fffbeb;
+        --warn-border: #fcd34d;
+        --warn-ink: #92400e;
         --err-bg: #fef2f2;
-        --err-border: #fecaca;
-        --err-ink: #b91c1c;
+        --err-border: #fca5a5;
+        --err-ink: #991b1b;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background: var(--bg);
         color: var(--ink);
         line-height: 1.45;
@@ -35,45 +38,43 @@
         padding: 16px;
       }
       header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
         margin-bottom: 14px;
       }
       h1 {
         font-size: 20px;
         margin: 0;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
       }
       .sub {
+        margin: 2px 0 0;
         font-size: 13px;
         color: var(--muted);
-        margin: 2px 0 0;
       }
       .card {
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 14px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
       }
       .card h2 {
-        font-size: 14px;
-        margin: 0 0 12px;
+        margin: 0 0 10px;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: var(--muted);
       }
       .field {
         margin-bottom: 12px;
       }
-      .field:last-child { margin-bottom: 0; }
+      .field:last-child {
+        margin-bottom: 0;
+      }
       label {
         display: block;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
       }
       .hint {
         font-size: 12px;
@@ -82,77 +83,70 @@
       }
       input[type="text"],
       input[type="url"],
-      input[type="password"],
+      input[type="email"],
       select {
         width: 100%;
         padding: 10px 12px;
-        font-size: 14px;
-        border: 1px solid #cbd4e1;
+        font-size: 15px;
+        border: 1px solid var(--border);
         border-radius: 10px;
         background: #fff;
         color: var(--ink);
       }
+      input.code-input {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
       .toggle-row {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding: 10px 0;
-        border-top: 1px solid #eef2f7;
+        padding: 8px 0;
+        border-top: 1px solid #eef1f5;
       }
-      .toggle-row:first-of-type { border-top: 0; padding-top: 2px; }
-      .toggle-row .title { font-size: 14px; font-weight: 600; }
-      .toggle-row .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-      .toggle-row input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        accent-color: var(--accent);
-        margin-top: 2px;
-        flex-shrink: 0;
+      .toggle-row:first-of-type {
+        border-top: 0;
+        padding-top: 2px;
       }
-      .oauth-box {
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 12px;
-        background: #fafbfd;
-        margin-bottom: 12px;
-      }
-      .oauth-box.connected {
-        background: var(--ok-bg);
-        border-color: var(--ok-border);
-      }
-      .oauth-status {
-        font-size: 13px;
+      .toggle-row .title {
+        font-size: 14px;
         font-weight: 600;
       }
-      .oauth-box.connected .oauth-status { color: var(--ok-ink); }
-      .oauth-meta {
+      .toggle-row .desc {
         font-size: 12px;
         color: var(--muted);
-        margin-top: 3px;
+      }
+      .toggle-row input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        accent-color: var(--accent);
+        flex: 0 0 auto;
       }
       .btn-row {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 10px;
+        margin-top: 8px;
       }
       button {
-        font: inherit;
-        cursor: pointer;
         border: 0;
         border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 13px;
         font-weight: 600;
-      }
-      .btn-google {
-        background: #111318;
-        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 9px 14px;
       }
       .btn-secondary {
-        background: #edf1f6;
+        background: #eef2f6;
         color: var(--ink);
+      }
+      .btn-accent {
+        background: var(--accent);
+        color: #fff;
       }
       .btn-danger {
         background: #fee2e2;
@@ -171,14 +165,48 @@
         border: 1px solid var(--ok-border);
         color: var(--ok-ink);
       }
+      .notice.warn {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-border);
+        color: var(--warn-ink);
+      }
       .notice.err {
         background: var(--err-bg);
         border: 1px solid var(--err-border);
         color: var(--err-ink);
       }
-      details {
+      .contact-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .contact-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fafbfc;
+      }
+      .contact-name { font-size: 14px; font-weight: 600; }
+      .contact-meta { font-size: 12px; color: var(--muted); }
+      .oauth-box {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fafbfc;
         margin-top: 10px;
-        font-size: 12px;
+      }
+      .oauth-box.connected {
+        background: var(--ok-bg);
+        border-color: var(--ok-border);
+      }
+      details {
+        margin-top: 8px;
+        font-size: 13px;
         color: var(--muted);
       }
       summary {
@@ -219,71 +247,75 @@
   <body>
     <main class="wrap">
       <header>
-        <div>
-          <h1>PebbleMeet Watch Settings</h1>
-          <p class="sub">Google Workspace OAuth, Chrome Bridge, Gestures &amp; Banners</p>
-        </div>
+        <h1>PebbleMeet Watch Settings</h1>
+        <p class="sub">Chrome Bridge Pairing, Quick Contacts, Gestures &amp; Banners</p>
       </header>
 
       <div id="notice" class="notice" role="status" aria-live="polite"></div>
 
-      <section class="card" aria-labelledby="sec-google">
-        <h2 id="sec-google">Google Account (Calendar, Contacts &amp; Meet)</h2>
-        <div id="oauth-box" class="oauth-box">
-          <div id="oauth-status" class="oauth-status">Not connected</div>
-          <div id="oauth-meta" class="oauth-meta">
-            Sign in with Google to sync upcoming Calendar meetings, Contacts, and instant Meet rooms.
+      <section class="card" aria-labelledby="sec-bridge">
+        <h2 id="sec-bridge">Chrome Extension Bridge (No Google Login Needed)</h2>
+        <div class="field">
+          <label for="PAIRING_CODE">6-Character Pairing Code</label>
+          <input
+            id="PAIRING_CODE"
+            class="code-input"
+            type="text"
+            maxlength="12"
+            placeholder="K7M-4NP"
+            autocomplete="off"
+          />
+          <div class="hint">
+            Open the <strong>PebbleMeet Bridge</strong> Chrome Extension popup on your computer and enter the code shown there.
           </div>
           <div class="btn-row">
-            <button type="button" id="btn-google-signin" class="btn-google">
-              Sign in with Google
-            </button>
-            <button type="button" id="btn-google-disconnect" class="btn-danger" hidden>
-              Disconnect
-            </button>
+            <button type="button" id="btn-check-bridge" class="btn-secondary">Check Bridge Status</button>
           </div>
         </div>
 
         <details>
-          <summary>Advanced: OAuth Relay URL &amp; Manual Token</summary>
+          <summary>Advanced: Custom Relay URL &amp; Optional Private Calendar (.ics)</summary>
           <div class="field" style="margin-top: 10px">
-            <label for="OAUTH_RELAY_URL">OAuth Relay Worker URL</label>
+            <label for="RELAY_URL">Cloudflare Worker Relay URL</label>
             <input
-              id="OAUTH_RELAY_URL"
+              id="RELAY_URL"
               type="url"
-              placeholder="https://pebble-meet-watchapp-oauth.apalson.workers.dev"
               value="https://pebble-meet-watchapp-oauth.apalson.workers.dev"
+              placeholder="https://pebble-meet-watchapp-oauth.apalson.workers.dev"
             />
             <div class="hint">
-              Cloudflare Worker that exchanges Google OAuth codes and refreshes expired tokens automatically.
+              Stateless Cloudflare Durable Object WebSocket relay connecting your phone and Chrome extension.
             </div>
           </div>
           <div class="field">
-            <label for="GOOGLE_TOKEN">Manual Google OAuth Access Token (Optional)</label>
+            <label for="CALENDAR_ICS_URL">Private Google Calendar .ics URL (Optional, Zero OAuth)</label>
             <input
-              id="GOOGLE_TOKEN"
-              type="password"
-              autocomplete="off"
-              placeholder="ya29.a0..."
+              id="CALENDAR_ICS_URL"
+              type="url"
+              placeholder="https://calendar.google.com/calendar/ical/.../basic.ics"
             />
             <div class="hint">
-              Fallback for testing with Google OAuth Playground before deploying the Worker.
+              Optional: Paste your Secret address in iCal format from Google Calendar Settings to list upcoming Meet links without Google OAuth.
             </div>
           </div>
         </details>
       </section>
 
-      <section class="card" aria-labelledby="sec-bridge">
-        <h2 id="sec-bridge">Chrome Extension Bridge</h2>
+      <section class="card" aria-labelledby="sec-contacts">
+        <h2 id="sec-contacts">Quick Contacts (Invite &amp; Ring from Watch)</h2>
+        <div id="contact-list" class="contact-list"></div>
         <div class="field">
-          <label for="BRIDGE_WS_URL">Chrome Bridge WebSocket URL</label>
-          <input
-            id="BRIDGE_WS_URL"
-            type="text"
-            value="ws://localhost:8765"
-            placeholder="ws://192.168.1.50:8765"
-          />
-          <div class="hint">Connects wrist Mute, Camera, Raise Hand, and Chat controls to your Meet tab.</div>
+          <input id="NEW_CONTACT_NAME" type="text" placeholder="Name (e.g. Alex Palson)" maxlength="30" />
+        </div>
+        <div class="field">
+          <input id="NEW_CONTACT_EMAIL" type="email" placeholder="Email (e.g. alex@company.com)" maxlength="46" />
+        </div>
+        <div class="field">
+          <input id="NEW_CONTACT_ROLE" type="text" placeholder="Label / Role (optional)" maxlength="26" />
+        </div>
+        <button type="button" id="btn-add-contact" class="btn-secondary">Add Contact</button>
+        <div class="hint">
+          Selecting a contact on Pebble opens Google Meet in Chrome and automatically invites/rings them—or invites them into your current call.
         </div>
       </section>
 
@@ -292,7 +324,7 @@
         <label class="toggle-row">
           <span>
             <div class="title">Push-to-Talk (PTT) by Default</div>
-            <div class="desc">Hold Up to talk, release to auto-mute.</div>
+            <div class="desc">Hold Up to talk (zero-latency raw hold), release to auto-mute.</div>
           </span>
           <input id="CFG_DEFAULT_PTT" type="checkbox" />
         </label>
@@ -312,6 +344,10 @@
         </label>
       </section>
 
+      <div id="ptt-warning" class="notice warn">
+        <strong>PTT Tip:</strong> When Push-to-Talk mode is active, the <strong>Up</strong> button switches to instant hold-to-talk. Keep <strong>Toggle PTT Mode</strong> mapped to <strong>Select</strong> or <strong>Down</strong> so you can always exit PTT mode cleanly.
+      </div>
+
       <section class="card" aria-labelledby="sec-up">
         <h2 id="sec-up">Up Button Actions</h2>
         <div class="field">
@@ -320,8 +356,8 @@
         </div>
         <div class="field">
           <label for="CFG_UP_DOUBLE">Double Press (2x Tap)</label>
-          <select id="CFG_UP_DOUBLE" data-default="10"></select>
-          <div class="hint">Set to Disabled for instant single-tap response.</div>
+          <select id="CFG_UP_DOUBLE" data-default="11"></select>
+          <div class="hint">Set to Disabled (default) for instant single-tap mute response.</div>
         </div>
         <div class="field">
           <label for="CFG_UP_LONG">Long Press (Hold)</label>
@@ -333,7 +369,8 @@
         <h2 id="sec-select">Select Button Actions</h2>
         <div class="field">
           <label for="CFG_SELECT_SHORT">Short Press (Tap)</label>
-          <select id="CFG_SELECT_SHORT" data-default="3"></select>
+          <select id="CFG_SELECT_SHORT" data-default="10"></select>
+          <div class="hint">Default: Toggle PTT Mode (also admits waiting guests when a Lobby alert is visible).</div>
         </div>
         <div class="field">
           <label for="CFG_SELECT_DOUBLE">Double Press (2x Tap)</label>
@@ -341,7 +378,8 @@
         </div>
         <div class="field">
           <label for="CFG_SELECT_LONG">Long Press (Hold)</label>
-          <select id="CFG_SELECT_LONG" data-default="11"></select>
+          <select id="CFG_SELECT_LONG" data-default="3"></select>
+          <div class="hint">Long-pressing End Call leaves immediately; mapping End Call to Short Press adds a confirmation prompt.</div>
         </div>
       </section>
 
@@ -379,7 +417,7 @@
         </label>
         <label class="toggle-row">
           <span>
-            <div class="title">Recording &amp; Note-Taking Banners</div>
+            <div class="title">Recording Banners</div>
             <div class="desc">Alert your wrist whenever Meet recording starts (Back to dismiss).</div>
           </span>
           <input id="CFG_ALERT_RECORDING" type="checkbox" checked />
@@ -392,13 +430,38 @@
           <input id="CFG_ALERT_LOBBY" type="checkbox" checked />
         </label>
         <div class="field" style="margin-top: 10px">
-          <label for="CFG_WRAP_UP_MINUTES">Meeting Wrap-Up Reminder</label>
+          <label for="CFG_WRAP_UP_MINUTES">Meeting Wrap-Up Reminder (for .ics Calendar)</label>
           <select id="CFG_WRAP_UP_MINUTES">
             <option value="0">Off</option>
             <option value="1">1 minute before</option>
             <option value="5" selected>5 minutes before</option>
           </select>
         </div>
+      </section>
+
+      <section class="card" aria-labelledby="sec-oauth">
+        <h2 id="sec-oauth">Optional Self-Hosted Google OAuth</h2>
+        <details>
+          <summary>Advanced: Self-Hosted Google Contacts OAuth (Off by Default)</summary>
+          <p class="hint" style="margin-top: 8px">
+            Automatic Google OAuth is disabled by default because Google blocks embedded Pebble WebView logins
+            (<code>403: disallowed_useragent</code>) and requires a custom verified domain for sensitive scopes.
+            If you self-host the Worker with Google OAuth secrets, sign in from the <strong>Chrome Extension popup</strong>
+            (real browser) or use a one-time OAuth ticket below.
+          </p>
+          <div id="oauth-box" class="oauth-box">
+            <div id="oauth-status" style="font-weight: 600; font-size: 14px">Not connected</div>
+            <div id="oauth-meta" class="hint">Optional — Quick Contacts above work with zero OAuth.</div>
+            <div class="btn-row">
+              <button type="button" id="btn-google-signin" class="btn-secondary">Sign in (Self-Hosted)</button>
+              <button type="button" id="btn-google-disconnect" class="btn-danger" hidden>Disconnect &amp; Revoke</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top: 10px">
+            <label for="OAUTH_TICKET_INPUT">One-Time Browser OAuth Ticket (Optional)</label>
+            <input id="OAUTH_TICKET_INPUT" type="text" placeholder="Paste 90s ticket if watch was offline" />
+          </div>
+        </details>
       </section>
 
       <p class="footer-links">
@@ -412,7 +475,7 @@
 
     <script>
       (function () {
-        var STORAGE_KEY = 'pebblemeet_hosted_config_v1';
+        var STORAGE_KEY = 'pebblemeet_hosted_config_v2';
         var DEFAULT_RELAY_URL = 'https://pebble-meet-watchapp-oauth.apalson.workers.dev';
         var BUTTON_ACTIONS = [
           { label: 'Toggle Mute', value: '0' },
@@ -421,6 +484,7 @@
           { label: 'End Call', value: '3' },
           { label: 'Raise / Lower Hand', value: '4' },
           { label: 'Chat & Replies (Dictation)', value: '5' },
+          { label: 'Toggle Captions (CC)', value: '8' },
           { label: 'Quick Reaction', value: '9' },
           { label: 'Toggle PTT Mode', value: '10' },
           { label: 'Disabled', value: '11' }
@@ -437,14 +501,8 @@
           'CFG_SHOW_CAPTIONS', 'CFG_ALERT_CHAT', 'CFG_ALERT_RECORDING', 'CFG_ALERT_LOBBY'
         ];
 
-        var oauthState = {
-          accessToken: '',
-          refreshToken: '',
-          expiresIn: 0,
-          email: '',
-          disconnected: false
-        };
-
+        var localContacts = [];
+        var oauthState = { ticket: '', email: '', disconnected: false };
         var returnTo = 'pebblejs://close#';
 
         function isSafeReturnTo(raw) {
@@ -452,7 +510,9 @@
           if (raw.indexOf('pebblejs://close#') === 0) return true;
           try {
             var u = new URL(raw);
-            return u.protocol === 'https:' && u.origin === window.location.origin;
+            if (u.protocol === 'https:' && u.origin === window.location.origin) return true;
+            if (u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) return true;
+            return false;
           } catch (e) {
             return false;
           }
@@ -460,39 +520,90 @@
 
         function showNotice(kind, message) {
           var el = document.getElementById('notice');
-          el.className = 'notice show ' + (kind === 'ok' ? 'ok' : 'err');
+          el.className = 'notice show ' + kind;
           el.textContent = message;
+        }
+
+        function updatePttWarning() {
+          var nonUpIds = [
+            'CFG_SELECT_SHORT', 'CFG_SELECT_DOUBLE', 'CFG_SELECT_LONG',
+            'CFG_DOWN_SHORT', 'CFG_DOWN_DOUBLE', 'CFG_DOWN_LONG'
+          ];
+          var upIds = ['CFG_UP_SHORT', 'CFG_UP_DOUBLE', 'CFG_UP_LONG'];
+          var hasNonUp = nonUpIds.some(function (id) {
+            var v = document.getElementById(id).value;
+            return v === '10' || v === '1';
+          });
+          var hasUpPtt = upIds.some(function (id) {
+            var v = document.getElementById(id).value;
+            return v === '10' || v === '1';
+          });
+          var defaultPtt = document.getElementById('CFG_DEFAULT_PTT').checked;
+          var warnEl = document.getElementById('ptt-warning');
+          warnEl.className = (!hasNonUp && (hasUpPtt || defaultPtt)) ? 'notice warn show' : 'notice warn';
+        }
+
+        function renderContacts() {
+          var list = document.getElementById('contact-list');
+          list.textContent = '';
+          if (!localContacts.length) {
+            var empty = document.createElement('div');
+            empty.className = 'hint';
+            empty.textContent = 'No favorite contacts added yet. Contacts added in the Chrome Extension also sync automatically.';
+            list.appendChild(empty);
+            return;
+          }
+          localContacts.forEach(function (c, idx) {
+            var row = document.createElement('div');
+            row.className = 'contact-item';
+
+            var info = document.createElement('div');
+            var n = document.createElement('div');
+            n.className = 'contact-name';
+            n.textContent = c.name || 'Contact';
+            var m = document.createElement('div');
+            m.className = 'contact-meta';
+            m.textContent = c.email + (c.role ? ' · ' + c.role : '');
+            info.appendChild(n);
+            info.appendChild(m);
+
+            var del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn-danger';
+            del.textContent = 'Remove';
+            del.addEventListener('click', function () {
+              localContacts.splice(idx, 1);
+              renderContacts();
+            });
+
+            row.appendChild(info);
+            row.appendChild(del);
+            list.appendChild(row);
+          });
         }
 
         function renderOAuthBox() {
           var box = document.getElementById('oauth-box');
           var statusEl = document.getElementById('oauth-status');
           var metaEl = document.getElementById('oauth-meta');
-          var signInBtn = document.getElementById('btn-google-signin');
           var disconnectBtn = document.getElementById('btn-google-disconnect');
 
-          var connected = Boolean(oauthState.accessToken || oauthState.refreshToken || oauthState.email) && !oauthState.disconnected;
+          var connected = Boolean(oauthState.ticket || oauthState.email) && !oauthState.disconnected;
           if (connected) {
             box.className = 'oauth-box connected';
             statusEl.textContent = oauthState.email
               ? 'Connected as ' + oauthState.email
-              : 'Connected to Google Workspace';
-            metaEl.textContent = oauthState.refreshToken
-              ? 'Auto-refresh enabled. Tap Save to Pebble Watch below to apply.'
-              : 'Access token ready. Tap Save to Pebble Watch below to sync.';
-            signInBtn.textContent = 'Switch Google Account';
+              : 'OAuth ticket ready';
+            metaEl.textContent = 'Tap "Save to Pebble Watch" below to apply.';
             disconnectBtn.hidden = false;
           } else {
             box.className = 'oauth-box';
             statusEl.textContent = 'Not connected';
-            metaEl.textContent =
-              'Sign in with Google to sync upcoming Calendar meetings, Contacts, and instant Meet rooms.';
-            signInBtn.textContent = 'Sign in with Google';
+            metaEl.textContent = 'Optional — Quick Contacts above work with zero OAuth.';
             disconnectBtn.hidden = true;
           }
         }
 
-        // Populate action dropdowns safely via DOM APIs
         SELECT_IDS.forEach(function (id) {
           var sel = document.getElementById(id);
           var def = sel.getAttribute('data-default') || '0';
@@ -503,15 +614,25 @@
             if (opt.value === def) optionEl.selected = true;
             sel.appendChild(optionEl);
           });
+          sel.addEventListener('change', updatePttWarning);
         });
+        document.getElementById('CFG_DEFAULT_PTT').addEventListener('change', updatePttWarning);
 
         function applySettingsToForm(s) {
           if (!s || typeof s !== 'object') return;
-          if (typeof s.BRIDGE_WS_URL === 'string' && s.BRIDGE_WS_URL) {
-            document.getElementById('BRIDGE_WS_URL').value = s.BRIDGE_WS_URL;
+          if (typeof s.PAIRING_CODE === 'string') {
+            var clean = s.PAIRING_CODE.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            document.getElementById('PAIRING_CODE').value =
+              clean.length === 6 ? clean.slice(0, 3) + '-' + clean.slice(3) : clean;
           }
-          if (typeof s.OAUTH_RELAY_URL === 'string' && s.OAUTH_RELAY_URL) {
-            document.getElementById('OAUTH_RELAY_URL').value = s.OAUTH_RELAY_URL;
+          if (typeof s.RELAY_URL === 'string' && s.RELAY_URL) {
+            document.getElementById('RELAY_URL').value = s.RELAY_URL;
+          }
+          if (typeof s.CALENDAR_ICS_URL === 'string') {
+            document.getElementById('CALENDAR_ICS_URL').value = s.CALENDAR_ICS_URL;
+          }
+          if (Array.isArray(s.LOCAL_CONTACTS)) {
+            localContacts = s.LOCAL_CONTACTS.slice(0, 16);
           }
           if (s.CFG_WRAP_UP_MINUTES !== undefined) {
             document.getElementById('CFG_WRAP_UP_MINUTES').value = String(s.CFG_WRAP_UP_MINUTES);
@@ -533,8 +654,10 @@
 
         function collectFormSettings() {
           var data = {
-            BRIDGE_WS_URL: document.getElementById('BRIDGE_WS_URL').value.trim() || 'ws://localhost:8765',
-            OAUTH_RELAY_URL: (document.getElementById('OAUTH_RELAY_URL').value.trim() || DEFAULT_RELAY_URL).replace(/\/+$/, ''),
+            PAIRING_CODE: document.getElementById('PAIRING_CODE').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''),
+            RELAY_URL: (document.getElementById('RELAY_URL').value.trim() || DEFAULT_RELAY_URL).replace(/\/+$/, ''),
+            CALENDAR_ICS_URL: document.getElementById('CALENDAR_ICS_URL').value.trim(),
+            LOCAL_CONTACTS: localContacts.slice(0, 16),
             CFG_WRAP_UP_MINUTES: parseInt(document.getElementById('CFG_WRAP_UP_MINUTES').value, 10) || 0
           };
           SELECT_IDS.forEach(function (id) {
@@ -546,13 +669,12 @@
           return data;
         }
 
-        // 1. Restore saved form preferences from browser storage
+        // 1. Restore cached form values
         try {
-          var cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-          applySettingsToForm(cached);
+          applySettingsToForm(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
         } catch (e) {}
 
-        // 2. Parse query params passed by PebbleKit JS (non-secret state + return_to)
+        // 2. Parse query params from PebbleKit JS / Pebble emulator
         var query = new URLSearchParams(window.location.search);
         var queryReturnTo = query.get('return_to');
         if (isSafeReturnTo(queryReturnTo)) {
@@ -565,7 +687,7 @@
           } catch (e) {}
         }
 
-        // 3. Parse OAuth callback fragment (#oauth_status=ok&access_token=...) and scrub URL
+        // 3. Parse single-use OAuth ticket fragment (never raw tokens!) and scrub URL
         if (window.location.hash && window.location.hash.length > 1) {
           var hashParams = new URLSearchParams(window.location.hash.slice(1));
           var hashReturnTo = hashParams.get('return_to');
@@ -574,12 +696,10 @@
           }
           var oauthStatus = hashParams.get('oauth_status');
           if (oauthStatus === 'ok') {
-            oauthState.accessToken = hashParams.get('access_token') || '';
-            oauthState.refreshToken = hashParams.get('refresh_token') || '';
-            oauthState.expiresIn = parseInt(hashParams.get('expires_in') || '3600', 10) || 3600;
+            oauthState.ticket = hashParams.get('oauth_ticket') || '';
             oauthState.email = hashParams.get('email') || '';
             oauthState.disconnected = false;
-            showNotice('ok', 'Google account connected. Tap "Save to Pebble Watch" to finish.');
+            showNotice('ok', 'Google OAuth ticket received. Tap "Save to Pebble Watch" to finish.');
           } else if (oauthStatus === 'error') {
             showNotice('err', hashParams.get('oauth_error') || 'Google sign-in could not be completed.');
           }
@@ -588,72 +708,83 @@
           }
         }
 
+        renderContacts();
         renderOAuthBox();
+        updatePttWarning();
 
-        document.getElementById('btn-google-signin').addEventListener('click', function () {
-          var formSettings = collectFormSettings();
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(formSettings));
-          } catch (e) {}
-
-          var relayUrl = formSettings.OAUTH_RELAY_URL;
-          if (!relayUrl || relayUrl.indexOf('https://') !== 0) {
-            showNotice('err', 'Enter a valid HTTPS OAuth Relay Worker URL under Advanced first.');
+        document.getElementById('btn-check-bridge').addEventListener('click', function () {
+          var s = collectFormSettings();
+          if (!s.PAIRING_CODE || s.PAIRING_CODE.length < 6) {
+            showNotice('err', 'Enter your 6-character pairing code from the Chrome Extension first.');
             return;
           }
-          window.location.href =
-            relayUrl + '/oauth/start?return_to=' + encodeURIComponent(returnTo);
+          fetch(s.RELAY_URL + '/bridge/status?room=' + encodeURIComponent(s.PAIRING_CODE))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data.chromeConnected) {
+                showNotice('ok', 'Chrome Extension is online for room ' + s.PAIRING_CODE + '. Tap Save to connect your watch.');
+              } else {
+                showNotice('warn', 'Relay reachable, but Chrome Extension is not online for ' + s.PAIRING_CODE + ' yet.');
+              }
+            })
+            .catch(function () {
+              showNotice('err', 'Could not reach Relay URL (' + s.RELAY_URL + ').');
+            });
+        });
+
+        document.getElementById('btn-add-contact').addEventListener('click', function () {
+          var nEl = document.getElementById('NEW_CONTACT_NAME');
+          var eEl = document.getElementById('NEW_CONTACT_EMAIL');
+          var rEl = document.getElementById('NEW_CONTACT_ROLE');
+          var name = nEl.value.trim();
+          var email = eEl.value.trim();
+          var role = rEl.value.trim() || 'Favorite';
+          if (!name || !email || email.indexOf('@') === -1) {
+            showNotice('err', 'Enter both a name and valid email address.');
+            return;
+          }
+          localContacts.push({
+            name: name.slice(0, 30),
+            email: email.slice(0, 46),
+            role: role.slice(0, 26)
+          });
+          nEl.value = '';
+          eEl.value = '';
+          rEl.value = '';
+          renderContacts();
+          showNotice('ok', 'Contact added. Tap "Save to Pebble Watch" to sync.');
+        });
+
+        document.getElementById('btn-google-signin').addEventListener('click', function () {
+          var s = collectFormSettings();
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+          if (!s.RELAY_URL || s.RELAY_URL.indexOf('https://') !== 0) {
+            showNotice('err', 'Enter a valid HTTPS Relay URL first.');
+            return;
+          }
+          window.location.href = s.RELAY_URL + '/oauth/start?return_to=' + encodeURIComponent(returnTo);
         });
 
         document.getElementById('btn-google-disconnect').addEventListener('click', function () {
-          var relayUrl = collectFormSettings().OAUTH_RELAY_URL;
-          var tokenToRevoke = oauthState.refreshToken || oauthState.accessToken;
-          if (relayUrl && relayUrl.indexOf('https://') === 0 && tokenToRevoke) {
-            fetch(relayUrl + '/oauth/revoke', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: tokenToRevoke })
-            }).catch(function () {});
-          }
-          oauthState = {
-            accessToken: '',
-            refreshToken: '',
-            expiresIn: 0,
-            email: '',
-            disconnected: true
-          };
-          document.getElementById('GOOGLE_TOKEN').value = '';
+          // Real token revocation is performed by PebbleKit JS (which holds the stored refresh token + proof)
+          oauthState = { ticket: '', email: '', disconnected: true };
+          document.getElementById('OAUTH_TICKET_INPUT').value = '';
           renderOAuthBox();
-          showNotice('ok', 'Google account disconnected. Tap "Save to Pebble Watch" to clear watch tokens.');
+          showNotice('ok', 'Marked for disconnect. Tap "Save to Pebble Watch" to revoke and clear tokens.');
         });
 
         document.getElementById('btn-save').addEventListener('click', function () {
           var payload = collectFormSettings();
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-          } catch (e) {}
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
 
-          var manualToken = document.getElementById('GOOGLE_TOKEN').value.trim();
+          var manualTicket = document.getElementById('OAUTH_TICKET_INPUT').value.trim();
           if (oauthState.disconnected) {
             payload.GOOGLE_DISCONNECT = 1;
-          } else {
-            if (oauthState.accessToken) {
-              payload.GOOGLE_TOKEN = oauthState.accessToken;
-              payload.GOOGLE_EXPIRES_IN = oauthState.expiresIn || 3600;
-            } else if (manualToken) {
-              payload.GOOGLE_TOKEN = manualToken;
-              payload.GOOGLE_EXPIRES_IN = 3600;
-            }
-            if (oauthState.refreshToken) {
-              payload.GOOGLE_REFRESH_TOKEN = oauthState.refreshToken;
-            }
-            if (oauthState.email) {
-              payload.GOOGLE_EMAIL = oauthState.email;
-            }
+          } else if (oauthState.ticket || manualTicket) {
+            payload.OAUTH_TICKET = oauthState.ticket || manualTicket;
           }
 
-          var targetUrl = returnTo + encodeURIComponent(JSON.stringify(payload));
-          window.location.href = targetUrl;
+          window.location.href = returnTo + encodeURIComponent(JSON.stringify(payload));
         });
       })();
     </script>

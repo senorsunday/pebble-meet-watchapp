@@ -1,4 +1,6 @@
 # Local-only Wrangler dev secrets (copy to .dev.vars; never commit .dev.vars)
+# Note: The Phone <-> Chrome WebSocket bridge works with ZERO secrets configured.
+# Only set these if you are self-hosting optional Google Contacts/Calendar OAuth:
 GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 STATE_SIGNING_SECRET=replace-with-output-of-openssl-rand-hex-32

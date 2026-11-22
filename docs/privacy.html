@@ -35,40 +35,41 @@
       <p class="meta">Last updated: 2026-11-22 · Maintainer: Alex Palson</p>
 
       <p>
-        <strong>PebbleMeet</strong> is an open-source Pebble smartwatch watchapp that lets you
-        view upcoming Google Calendar meetings, browse Google Contacts, and start or control Google
-        Meet calls from your wrist.
+        <strong>PebbleMeet</strong> is an open-source Pebble smartwatch watchapp and Chrome extension
+        that lets you control Google Meet calls and invite contacts from your wrist—without requiring
+        a Google OAuth login by default.
       </p>
 
-      <h2>1. Google User Data We Access</h2>
-      <p>When you choose to connect your Google account in PebbleMeet Settings, we request only the minimum read/create scopes required for watchapp functionality:</p>
+      <h2>1. Default Mode (Zero Google OAuth)</h2>
       <ul>
-        <li><code>https://www.googleapis.com/auth/calendar.events.readonly</code> — reads upcoming events with Google Meet links from your primary calendar to display on your Pebble watch.</li>
-        <li><code>https://www.googleapis.com/auth/contacts.readonly</code> — reads contact names and email addresses so you can initiate a Google Meet call from your watch menu.</li>
-        <li><code>https://www.googleapis.com/auth/meetings.space.created</code> — creates a new Google Meet space URL when you start an ad-hoc call to a contact.</li>
-        <li><code>email</code> — displays which Google account is currently signed in on the settings screen.</li>
+        <li><strong>Chrome Bridge Relay:</strong> Your watch (via the Pebble mobile app) and your Chrome extension connect to a Cloudflare Workers Durable Object relay using a random 6-character pairing code. Messages (mute/camera commands, open Meet tab titles, favorite contacts, and call status) are relayed in real time in memory and are never logged or stored in a database.</li>
+        <li><strong>On-device storage:</strong> Your pairing code, button preferences, optional private calendar <code>.ics</code> URL, and Quick Contacts are stored locally on your phone (PebbleKit JS <code>localStorage</code>) and in Chrome extension local storage.</li>
       </ul>
 
-      <h2>2. How Data Is Stored &amp; Processed</h2>
+      <h2>2. Optional Self-Hosted Google OAuth</h2>
+      <p>If you choose to connect an optional self-hosted OAuth relay, PebbleMeet requests only minimal scopes:</p>
       <ul>
-        <li><strong>On-device storage only:</strong> Your OAuth access token and refresh token are stored locally inside the Pebble mobile app's PebbleKit JS storage on your phone.</li>
-        <li><strong>Stateless OAuth relay:</strong> Our Cloudflare Worker relay exchanges authorization codes and refreshes expired access tokens on your behalf. It has no database and never stores, logs, or shares your tokens, calendar events, or contacts.</li>
-        <li><strong>No third-party sharing or advertising:</strong> PebbleMeet does not sell, share, or transfer Google user data to third parties or use it for advertising or AI/ML training.</li>
+        <li><code>https://www.googleapis.com/auth/contacts.readonly</code> — optional import of Google Contact names and emails so you can invite/ring them from your watch.</li>
+        <li><code>openid</code> &amp; <code>email</code> — displays which Google account is signed in.</li>
       </ul>
+      <p>
+        OAuth authorization codes are exchanged on the Worker into a short-lived (90-second), single-use
+        exchange ticket stored transiently in Durable Object storage and deleted immediately upon redemption.
+        Tokens are never placed in URL fragments and are stored only on your phone.
+      </p>
 
       <h2>3. Revoking Access &amp; Deleting Data</h2>
       <p>
-        You can disconnect at any time by tapping <strong>Disconnect</strong> inside PebbleMeet
-        Settings in the Pebble app, or by revoking access directly in your
+        Generate a new pairing code in the Chrome Extension at any time to disconnect a watch. If using
+        optional self-hosted OAuth, tap <strong>Disconnect &amp; Revoke</strong> in PebbleMeet Settings
+        (which revokes the token with Google and wipes local storage) or revoke access in
         <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">Google Account Permissions</a>.
-        Uninstalling PebbleMeet from the Pebble app removes all locally stored tokens and settings.
       </p>
 
       <h2>4. Open Source &amp; Contact</h2>
       <p>
-        Full source code for both the watchapp and OAuth relay is available at
+        Full source code is available at
         <a href="https://github.com/senorsunday/pebble-meet-watchapp" target="_blank" rel="noreferrer">https://github.com/senorsunday/pebble-meet-watchapp</a>.
-        For privacy questions or deletion requests, please open an issue on that repository.
       </p>
     </main>
   </body>

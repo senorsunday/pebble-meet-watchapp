@@ -2,7 +2,7 @@ name: Build & Release Pebble .pbw
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feat/*']
     tags:
       - 'v*'
   pull_request:
@@ -21,12 +21,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Validate Pebble package.json & Chrome Bridge manifest
+      - name: Validate JSON manifests & JS syntax
         run: |
           node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('chrome-bridge/manifest.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('appstore/store-listing.json','utf8'))"
+          node --check src/pkjs/index.js
+          node --check chrome-bridge/background.js
+          node --check chrome-bridge/content.js
+          node --check chrome-bridge/popup.js
 
-      - name: Install PebbleKit JS dependencies (pebble-clay)
+      - name: Install PebbleKit JS dependencies
         run: npm install --no-audit --no-fund
 
       - name: Compile Pebble watchapp (.pbw)
@@ -41,10 +46,12 @@ jobs:
           fi
           pebble build
 
-      - name: Verify .pbw output
+      - name: Verify & version .pbw output
         run: |
-          ls -lh build/*.pbw
-          cp build/*.pbw build/pebble-meet-watchapp-v0.0.1.pbw
+          VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")
+          PBW_FILE=$(ls build/*.pbw | head -n 1)
+          ls -lh "$PBW_FILE"
+          cp "$PBW_FILE" "build/pebble-meet-watchapp-v${VERSION}.pbw"
 
       - name: Upload compiled .pbw artifact
         uses: actions/upload-artifact@v7

@@ -6,6 +6,9 @@
 #define ROLE_LEN 28
 #define CODE_LEN 16
 
+#define PERSIST_KEY_CONFIG 3
+#define CONFIG_STRUCT_VERSION 2
+
 typedef struct {
   char title[NAME_LEN];
   char time_str[ROLE_LEN];
@@ -19,6 +22,55 @@ typedef struct {
   char email[48];
   bool is_favorite;
 } MeetContact;
+
+typedef enum {
+  ACT_TOGGLE_MUTE = 0,
+  ACT_PUSH_TO_TALK = 1,
+  ACT_TOGGLE_CAMERA = 2,
+  ACT_END_CALL = 3,
+  ACT_RAISE_HAND = 4,
+  ACT_OPEN_CHAT = 5,
+  ACT_TOGGLE_CAPTIONS = 8,
+  ACT_SEND_REACTION = 9,
+  ACT_TOGGLE_PTT_MODE = 10,
+  ACT_NONE = 11
+} WatchButtonAction;
+
+typedef enum {
+  BANNER_KIND_GENERIC = 0,
+  BANNER_KIND_CHAT = 1,
+  BANNER_KIND_RECORDING = 2,
+  BANNER_KIND_LOBBY = 3,
+  BANNER_KIND_WRAP_UP = 4
+} WatchBannerKind;
+
+typedef enum {
+  CONFIRM_NONE = 0,
+  CONFIRM_SWITCH_MEETING = 1,
+  CONFIRM_CONTACT_IN_CALL = 2,
+  CONFIRM_END_CALL = 3
+} ConfirmMode;
+
+typedef struct {
+  uint32_t version;
+  bool default_ptt;
+  bool join_muted;
+  bool join_cam_off;
+  uint8_t up_short;
+  uint8_t up_double;
+  uint8_t up_long;
+  uint8_t select_short;
+  uint8_t select_double;
+  uint8_t select_long;
+  uint8_t down_short;
+  uint8_t down_double;
+  uint8_t down_long;
+  bool show_captions;
+  bool alert_chat;
+  bool alert_recording;
+  bool alert_lobby;
+  uint8_t wrap_up_minutes;
+} PebbleMeetConfig;
 
 static Window *s_menu_window;
 static MenuLayer *s_menu_layer;
@@ -36,9 +88,10 @@ static TextLayer *s_banner_layer;
 static Window *s_confirm_window;
 static TextLayer *s_confirm_title_layer;
 static TextLayer *s_confirm_body_layer;
+static ConfirmMode s_confirm_mode = CONFIRM_NONE;
 static int s_pending_section = -1;
 static int s_pending_row = -1;
-static char s_confirm_buf[128];
+static char s_confirm_buf[160];
 
 #if defined(PBL_MICROPHONE)
 static DictationSession *s_dictation_session;
@@ -63,66 +116,33 @@ static bool s_is_camera_on = true;
 static bool s_hand_raised = false;
 static bool s_ptt_mode = false;
 static int s_call_seconds = 0;
-static int s_participant_count = 2;
+static int s_participant_count = 1;
 static bool s_is_recording = false;
 static bool s_banner_visible = false;
+static WatchBannerKind s_banner_kind = BANNER_KIND_GENERIC;
 static char s_banner_body[64] = "";
+static char s_caption_buf[64] = "";
 
-#define PERSIST_KEY_CONFIG 3
-
-typedef enum {
-  ACT_TOGGLE_MUTE = 0,
-  ACT_PUSH_TO_TALK = 1,
-  ACT_TOGGLE_CAMERA = 2,
-  ACT_END_CALL = 3,
-  ACT_RAISE_HAND = 4,
-  ACT_OPEN_CHAT = 5,
-  ACT_OPEN_NOTES = 6,
-  ACT_OPEN_PARTICIPANTS = 7,
-  ACT_TOGGLE_CAPTIONS = 8,
-  ACT_SEND_REACTION = 9,
-  ACT_TOGGLE_PTT_MODE = 10,
-  ACT_NONE = 11
-} WatchButtonAction;
-
-typedef enum {
-  BANNER_KIND_GENERIC = 0,
-  BANNER_KIND_CHAT = 1,
-  BANNER_KIND_RECORDING = 2,
-  BANNER_KIND_LOBBY = 3,
-  BANNER_KIND_WRAP_UP = 4
-} WatchBannerKind;
-
-typedef struct {
-  bool default_ptt;
-  bool join_muted;
-  bool join_cam_off;
-  uint8_t up_short;
-  uint8_t up_double;
-  uint8_t up_long;
-  uint8_t select_short;
-  uint8_t select_double;
-  uint8_t select_long;
-  uint8_t down_short;
-  uint8_t down_double;
-  uint8_t down_long;
-  bool show_captions;
-  bool alert_chat;
-  bool alert_recording;
-  bool alert_lobby;
-  uint8_t wrap_up_minutes;
-} PebbleMeetConfig;
-
+/* Safe default button mapping (fixes Issue #1 & prevents accidental hang-ups):
+ *  - UP short:     Toggle Mute (instant tap, no double-tap delay)
+ *  - UP long:      Raise / Lower Hand
+ *  - SELECT short: Toggle PTT Mode (keeps PTT toggleable even when UP is raw PTT)
+ *  - SELECT dbl:   Quick Reaction
+ *  - SELECT long:  End Call
+ *  - DOWN short:   Toggle Camera (instant tap)
+ *  - DOWN long:    Chat Dictation
+ */
 static PebbleMeetConfig s_cfg = {
+  .version = CONFIG_STRUCT_VERSION,
   .default_ptt = false,
   .join_muted = false,
   .join_cam_off = false,
   .up_short = ACT_TOGGLE_MUTE,
-  .up_double = ACT_TOGGLE_PTT_MODE,
+  .up_double = ACT_NONE,
   .up_long = ACT_RAISE_HAND,
-  .select_short = ACT_END_CALL,
+  .select_short = ACT_TOGGLE_PTT_MODE,
   .select_double = ACT_SEND_REACTION,
-  .select_long = ACT_NONE,
+  .select_long = ACT_END_CALL,
   .down_short = ACT_TOGGLE_CAMERA,
   .down_double = ACT_NONE,
   .down_long = ACT_OPEN_CHAT,
@@ -136,7 +156,23 @@ static PebbleMeetConfig s_cfg = {
 static char s_active_callee[NAME_LEN] = "";
 static char s_active_speaker[NAME_LEN] = "Waiting...";
 static char s_timer_buf[24] = "00:00";
-static char s_speaker_buf[48] = "Spk: -- (2)";
+static char s_speaker_buf[68] = "Spk: -- (1)";
+
+static void call_click_config_provider(void *context);
+static void tick_handler(struct tm *tick_time, TimeUnits units_changed);
+
+/* -------------------------------------------------------------------------
+ * Tick Timer Lifecycle (Only ticks every second while actively in a call)
+ * ------------------------------------------------------------------------- */
+static void set_in_call(bool in_call) {
+  if (s_in_call == in_call) return;
+  s_in_call = in_call;
+  if (s_in_call) {
+    tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+  } else {
+    tick_timer_service_unsubscribe();
+  }
+}
 
 /* -------------------------------------------------------------------------
  * AppMessage Outbound Helpers (Watch -> Phone PebbleKit JS)
@@ -153,6 +189,27 @@ static void send_chat_message(const char *message) {
   if (app_message_outbox_begin(&iter) != APP_MSG_OK) return;
   dict_write_cstring(iter, MESSAGE_KEY_CMD_SEND_CHAT, message);
   app_message_outbox_send();
+}
+
+static void send_invite_contact(const MeetContact *c) {
+  DictionaryIterator *iter;
+  if (!c || app_message_outbox_begin(&iter) != APP_MSG_OK) return;
+  dict_write_int32(iter, MESSAGE_KEY_CMD_INVITE_CONTACT, 1);
+  dict_write_cstring(iter, MESSAGE_KEY_CONTACT_EMAIL, c->email);
+  dict_write_cstring(iter, MESSAGE_KEY_CONTACT_NAME, c->name);
+  app_message_outbox_send();
+}
+
+static void show_watch_banner(WatchBannerKind kind, const char *text) {
+  s_banner_kind = kind;
+  snprintf(s_banner_body, sizeof(s_banner_body), "%s", text ? text : "");
+  s_banner_visible = true;
+}
+
+static void refresh_call_click_config(void) {
+  if (s_call_window && window_is_loaded(s_call_window) && s_action_bar) {
+    action_bar_layer_set_click_config_provider(s_action_bar, call_click_config_provider);
+  }
 }
 
 /* -------------------------------------------------------------------------
@@ -172,8 +229,12 @@ static void update_call_ui(void) {
   }
   text_layer_set_text(s_timer_layer, s_timer_buf);
 
-  snprintf(s_speaker_buf, sizeof(s_speaker_buf), "Spk: %.14s (%d)",
-           s_active_speaker, s_participant_count);
+  if (s_cfg.show_captions && s_caption_buf[0] != '\0') {
+    snprintf(s_speaker_buf, sizeof(s_speaker_buf), "CC: %.40s", s_caption_buf);
+  } else {
+    snprintf(s_speaker_buf, sizeof(s_speaker_buf), "Spk: %.14s (%d)",
+             s_active_speaker, s_participant_count);
+  }
   text_layer_set_text(s_speaker_layer, s_speaker_buf);
 
   if (s_hand_raised) {
@@ -220,7 +281,34 @@ static void dictation_callback(DictationSession *session,
 /* -------------------------------------------------------------------------
  * Configurable In-Call Action Dispatch & BACK-Dismissible Watch Banners
  * ------------------------------------------------------------------------- */
-static void execute_watch_action(WatchButtonAction action) {
+static bool is_ptt_toggle_action(uint8_t act) {
+  return act == ACT_TOGGLE_PTT_MODE || act == ACT_PUSH_TO_TALK;
+}
+
+static bool has_non_up_ptt_toggle(void) {
+  return is_ptt_toggle_action(s_cfg.select_short) ||
+         is_ptt_toggle_action(s_cfg.select_double) ||
+         is_ptt_toggle_action(s_cfg.select_long) ||
+         is_ptt_toggle_action(s_cfg.down_short) ||
+         is_ptt_toggle_action(s_cfg.down_double) ||
+         is_ptt_toggle_action(s_cfg.down_long);
+}
+
+static void perform_end_call(void) {
+  set_in_call(false);
+  s_hand_raised = false;
+  s_is_recording = false;
+  s_banner_visible = false;
+  s_banner_kind = BANNER_KIND_GENERIC;
+  s_caption_buf[0] = '\0';
+  vibes_double_pulse();
+  send_int_command(MESSAGE_KEY_CMD_END_CALL, 1);
+  if (window_stack_get_top_window() == s_call_window) {
+    window_stack_pop(true);
+  }
+}
+
+static void execute_watch_action(WatchButtonAction action, bool from_short_press) {
   switch (action) {
     case ACT_TOGGLE_MUTE:
       if (s_ptt_mode) return;
@@ -236,18 +324,23 @@ static void execute_watch_action(WatchButtonAction action) {
       update_call_ui();
       break;
     case ACT_END_CALL:
-      s_in_call = false;
-      s_hand_raised = false;
-      s_banner_visible = false;
-      vibes_double_pulse();
-      send_int_command(MESSAGE_KEY_CMD_END_CALL, 1);
-      window_stack_pop(true);
+      if (from_short_press) {
+        s_confirm_mode = CONFIRM_END_CALL;
+        vibes_short_pulse();
+        window_stack_push(s_confirm_window, true);
+      } else {
+        perform_end_call();
+      }
       break;
     case ACT_TOGGLE_CAMERA:
       s_is_camera_on = !s_is_camera_on;
       vibes_short_pulse();
       send_int_command(MESSAGE_KEY_CMD_TOGGLE_CAMERA, s_is_camera_on ? 1 : 0);
       update_call_ui();
+      break;
+    case ACT_TOGGLE_CAPTIONS:
+      vibes_short_pulse();
+      send_int_command(MESSAGE_KEY_CMD_TOGGLE_CAPTIONS, 1);
       break;
     case ACT_OPEN_CHAT:
       vibes_short_pulse();
@@ -260,15 +353,14 @@ static void execute_watch_action(WatchButtonAction action) {
       send_chat_message("On mute, listening in from Pebble");
       break;
     case ACT_PUSH_TO_TALK:
-      s_ptt_mode = !s_ptt_mode;
-      if (s_ptt_mode) s_is_muted = true;
-      vibes_short_pulse();
-      update_call_ui();
-      break;
     case ACT_TOGGLE_PTT_MODE:
       s_ptt_mode = !s_ptt_mode;
-      if (s_ptt_mode) s_is_muted = true;
+      if (s_ptt_mode) {
+        s_is_muted = true;
+        send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 1);
+      }
       vibes_short_pulse();
+      refresh_call_click_config();
       update_call_ui();
       break;
     case ACT_SEND_REACTION:
@@ -284,6 +376,18 @@ static bool is_ptt_hold_button(ButtonId btn, WatchButtonAction long_action) {
   return long_action == ACT_PUSH_TO_TALK || (btn == BUTTON_ID_UP && s_ptt_mode);
 }
 
+static void call_up_ptt_raw_down(ClickRecognizerRef recognizer, void *ctx) {
+  s_is_muted = false;
+  send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 0);
+  update_call_ui();
+}
+
+static void call_up_ptt_raw_up(ClickRecognizerRef recognizer, void *ctx) {
+  s_is_muted = true;
+  send_int_command(MESSAGE_KEY_CMD_TOGGLE_MUTE, 1);
+  update_call_ui();
+}
+
 static void handle_long_press_down(ButtonId btn, WatchButtonAction long_action) {
   if (is_ptt_hold_button(btn, long_action)) {
     s_is_muted = false;
@@ -291,7 +395,7 @@ static void handle_long_press_down(ButtonId btn, WatchButtonAction long_action) 
     update_call_ui();
     return;
   }
-  execute_watch_action(long_action);
+  execute_watch_action(long_action, false);
 }
 
 static void handle_long_press_up(ButtonId btn, WatchButtonAction long_action) {
@@ -305,6 +409,7 @@ static void handle_long_press_up(ButtonId btn, WatchButtonAction long_action) {
 static void call_back_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   if (s_banner_visible) {
     s_banner_visible = false;
+    s_banner_kind = BANNER_KIND_GENERIC;
     s_banner_body[0] = '\0';
     update_call_ui();
     return;
@@ -314,10 +419,10 @@ static void call_back_click_handler(ClickRecognizerRef recognizer, void *ctx) {
 
 static void call_up_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   if (s_cfg.up_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
-    execute_watch_action((WatchButtonAction)s_cfg.up_double);
+    execute_watch_action((WatchButtonAction)s_cfg.up_double, false);
     return;
   }
-  execute_watch_action((WatchButtonAction)s_cfg.up_short);
+  execute_watch_action((WatchButtonAction)s_cfg.up_short, true);
 }
 
 static void call_up_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
@@ -330,16 +435,20 @@ static void call_up_long_release_handler(ClickRecognizerRef recognizer, void *ct
 
 static void call_select_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   if (s_cfg.select_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
-    execute_watch_action((WatchButtonAction)s_cfg.select_double);
+    execute_watch_action((WatchButtonAction)s_cfg.select_double, false);
     return;
   }
-  if (s_banner_visible) {
+  /* Only admit a waiting guest when a LOBBY banner is actually showing */
+  if (s_banner_visible && s_banner_kind == BANNER_KIND_LOBBY) {
     s_banner_visible = false;
+    s_banner_kind = BANNER_KIND_GENERIC;
+    s_banner_body[0] = '\0';
+    vibes_short_pulse();
     send_int_command(MESSAGE_KEY_CMD_ADMIT_GUEST, 1);
     update_call_ui();
     return;
   }
-  execute_watch_action((WatchButtonAction)s_cfg.select_short);
+  execute_watch_action((WatchButtonAction)s_cfg.select_short, true);
 }
 
 static void call_select_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
@@ -352,10 +461,10 @@ static void call_select_long_release_handler(ClickRecognizerRef recognizer, void
 
 static void call_down_multi_click_handler(ClickRecognizerRef recognizer, void *ctx) {
   if (s_cfg.down_double != ACT_NONE && click_number_of_clicks_counted(recognizer) >= 2) {
-    execute_watch_action((WatchButtonAction)s_cfg.down_double);
+    execute_watch_action((WatchButtonAction)s_cfg.down_double, false);
     return;
   }
-  execute_watch_action((WatchButtonAction)s_cfg.down_short);
+  execute_watch_action((WatchButtonAction)s_cfg.down_short, true);
 }
 
 static void call_down_long_click_handler(ClickRecognizerRef recognizer, void *ctx) {
@@ -369,14 +478,21 @@ static void call_down_long_release_handler(ClickRecognizerRef recognizer, void *
 static void call_click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_BACK, call_back_click_handler);
 
-  if (s_cfg.up_double != ACT_NONE) {
-    window_multi_click_subscribe(BUTTON_ID_UP, 1, 2, 280, true, call_up_multi_click_handler);
+  /* When PTT is active and another button can toggle PTT off, use raw press/release
+   * on UP for zero-latency Push-to-Talk. Otherwise fall back to multi+long click
+   * so the user can never be trapped in PTT mode (Issue #1). */
+  if (s_ptt_mode && has_non_up_ptt_toggle()) {
+    window_raw_click_subscribe(BUTTON_ID_UP, call_up_ptt_raw_down, call_up_ptt_raw_up, NULL);
   } else {
-    window_single_click_subscribe(BUTTON_ID_UP, call_up_multi_click_handler);
+    if (s_cfg.up_double != ACT_NONE) {
+      window_multi_click_subscribe(BUTTON_ID_UP, 1, 2, 280, true, call_up_multi_click_handler);
+    } else {
+      window_single_click_subscribe(BUTTON_ID_UP, call_up_multi_click_handler);
+    }
+    window_long_click_subscribe(
+      BUTTON_ID_UP, 350, call_up_long_click_handler, call_up_long_release_handler
+    );
   }
-  window_long_click_subscribe(
-    BUTTON_ID_UP, 350, call_up_long_click_handler, call_up_long_release_handler
-  );
 
   if (s_cfg.select_double != ACT_NONE) {
     window_multi_click_subscribe(BUTTON_ID_SELECT, 1, 2, 280, true, call_select_multi_click_handler);
@@ -463,7 +579,8 @@ static void call_window_unload(Window *window) {
 /* -------------------------------------------------------------------------
  * Multi-Section MenuLayer:
  *   When in call: Section 0 = CURRENT CALL (pinned first & highlighted),
- *                 Section 1 = MEETINGS, Section 2 = FAVORITES & CONTACTS
+ *                 Section 1 = MEETINGS (+ New Meet + open/calendar Meets),
+ *                 Section 2 = FAVORITES & CONTACTS
  *   When idle:    Section 0 = MEETINGS, Section 1 = FAVORITES & CONTACTS
  * ------------------------------------------------------------------------- */
 static uint16_t menu_get_num_sections(MenuLayer *menu_layer, void *ctx) {
@@ -475,8 +592,8 @@ static uint16_t menu_get_num_rows(MenuLayer *menu_layer, uint16_t section, void 
     if (section == 0) return 1;
     section -= 1;
   }
-  if (section == 0) return s_meeting_count > 0 ? s_meeting_count : 1;
-  return s_contact_count > 0 ? s_contact_count : 1;
+  if (section == 0) return (uint16_t)(s_meeting_count + 1); // Row 0 = "+ New Google Meet"
+  return s_contact_count > 0 ? (uint16_t)s_contact_count : 1;
 }
 
 #ifndef PBL_ROUND
@@ -517,17 +634,17 @@ static void menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *idx
   }
 
   if (section == 0) {
-    if (s_meeting_count == 0) {
-      menu_cell_basic_draw(ctx, cell_layer, "No Upcoming Meets", "Sync Google Calendar", NULL);
+    if (idx->row == 0) {
+      menu_cell_basic_draw(ctx, cell_layer, "+ New Google Meet", "Start instant room in Chrome", NULL);
       return;
     }
-    CalendarMeeting *m = &s_meetings[idx->row];
+    CalendarMeeting *m = &s_meetings[idx->row - 1];
     menu_cell_basic_draw(ctx, cell_layer, m->title, m->time_str, NULL);
     return;
   }
 
   if (s_contact_count == 0) {
-    menu_cell_basic_draw(ctx, cell_layer, "Syncing Contacts...", "Open Phone Settings", NULL);
+    menu_cell_basic_draw(ctx, cell_layer, "No Favorites Yet", "Add in Chrome or Settings", NULL);
     return;
   }
   MeetContact *c = &s_contacts[idx->row];
@@ -536,18 +653,26 @@ static void menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *idx
 
 static void start_selected_target(uint16_t section, uint16_t row) {
   DictionaryIterator *iter;
-  if (section == 0 && s_meeting_count > 0) {
-    CalendarMeeting *m = &s_meetings[row];
-    snprintf(s_active_callee, sizeof(s_active_callee), "%s", m->title);
-    s_participant_count = m->attendees;
-    if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
-      dict_write_cstring(iter, MESSAGE_KEY_CMD_JOIN_MEETING, m->meet_code);
-      app_message_outbox_send();
+  if (section == 0) {
+    if (row == 0) {
+      snprintf(s_active_callee, sizeof(s_active_callee), "New Google Meet");
+      s_participant_count = 1;
+      send_int_command(MESSAGE_KEY_CMD_NEW_MEET, 1);
+    } else if ((int)(row - 1) < s_meeting_count) {
+      CalendarMeeting *m = &s_meetings[row - 1];
+      snprintf(s_active_callee, sizeof(s_active_callee), "%s", m->title);
+      s_participant_count = m->attendees > 0 ? m->attendees : 1;
+      if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+        dict_write_cstring(iter, MESSAGE_KEY_CMD_JOIN_MEETING, m->meet_code);
+        app_message_outbox_send();
+      }
+    } else {
+      return;
     }
-  } else if (section == 1 && s_contact_count > 0) {
+  } else if (section == 1 && (int)row < s_contact_count) {
     MeetContact *c = &s_contacts[row];
     snprintf(s_active_callee, sizeof(s_active_callee), "%s", c->name);
-    s_participant_count = 2;
+    s_participant_count = 1;
     if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
       dict_write_int32(iter, MESSAGE_KEY_CMD_START_CALL, row);
       dict_write_cstring(iter, MESSAGE_KEY_CONTACT_EMAIL, c->email);
@@ -558,34 +683,80 @@ static void start_selected_target(uint16_t section, uint16_t row) {
     return;
   }
 
-  s_in_call = true;
+  set_in_call(true);
   s_ptt_mode = s_cfg.default_ptt;
   s_is_muted = s_cfg.join_muted || s_cfg.default_ptt;
   s_is_camera_on = !s_cfg.join_cam_off;
   s_hand_raised = false;
   s_is_recording = false;
+  s_banner_visible = false;
+  s_banner_kind = BANNER_KIND_GENERIC;
+  s_caption_buf[0] = '\0';
   s_call_seconds = 0;
   vibes_short_pulse();
   window_stack_push(s_call_window, true);
 }
 
 static void confirm_select_handler(ClickRecognizerRef recognizer, void *ctx) {
-  send_int_command(MESSAGE_KEY_CMD_END_CALL, 1);
-  window_stack_pop(false);
-  if (s_pending_section >= 0 && s_pending_row >= 0) {
-    start_selected_target((uint16_t)s_pending_section, (uint16_t)s_pending_row);
-  }
+  ConfirmMode mode = s_confirm_mode;
+  int pending_section = s_pending_section;
+  int pending_row = s_pending_row;
+  s_confirm_mode = CONFIRM_NONE;
   s_pending_section = -1;
   s_pending_row = -1;
+
+  if (mode == CONFIRM_END_CALL) {
+    window_stack_pop(false);
+    perform_end_call();
+    return;
+  }
+
+  if (mode == CONFIRM_CONTACT_IN_CALL && pending_row >= 0 && pending_row < s_contact_count) {
+    MeetContact *c = &s_contacts[pending_row];
+    send_invite_contact(c);
+    static char s_inv_msg[64];
+    snprintf(s_inv_msg, sizeof(s_inv_msg), "Inviting %.20s...", c->name);
+    show_watch_banner(BANNER_KIND_GENERIC, s_inv_msg);
+    vibes_short_pulse();
+    window_stack_pop(false);
+    window_stack_push(s_call_window, true);
+    return;
+  }
+
+  if (mode == CONFIRM_SWITCH_MEETING && pending_section >= 0 && pending_row >= 0) {
+    send_int_command(MESSAGE_KEY_CMD_END_CALL, 1);
+    window_stack_pop(false);
+    start_selected_target((uint16_t)pending_section, (uint16_t)pending_row);
+    return;
+  }
+
+  window_stack_pop(true);
+}
+
+static void confirm_up_handler(ClickRecognizerRef recognizer, void *ctx) {
+  if (s_confirm_mode != CONFIRM_CONTACT_IN_CALL) return;
+  int pending_section = s_pending_section;
+  int pending_row = s_pending_row;
+  s_confirm_mode = CONFIRM_NONE;
+  s_pending_section = -1;
+  s_pending_row = -1;
+
+  send_int_command(MESSAGE_KEY_CMD_END_CALL, 1);
+  window_stack_pop(false);
+  if (pending_section >= 0 && pending_row >= 0) {
+    start_selected_target((uint16_t)pending_section, (uint16_t)pending_row);
+  }
 }
 
 static void confirm_stay_handler(ClickRecognizerRef recognizer, void *ctx) {
+  s_confirm_mode = CONFIRM_NONE;
   s_pending_section = -1;
   s_pending_row = -1;
   window_stack_pop(true);
 }
 
 static void confirm_click_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_UP, confirm_up_handler);
   window_single_click_subscribe(BUTTON_ID_SELECT, confirm_select_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, confirm_stay_handler);
 }
@@ -593,24 +764,35 @@ static void confirm_click_config_provider(void *context) {
 static void confirm_window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
-  const char *next_name =
-    (s_pending_section == 0 && s_pending_row < s_meeting_count)
-      ? s_meetings[s_pending_row].title
-      : (s_pending_section == 1 && s_pending_row < s_contact_count)
-          ? s_contacts[s_pending_row].name
-          : "Next Call";
-
   int pad = PBL_IF_ROUND_ELSE(22, 8);
+
   s_confirm_title_layer = text_layer_create(GRect(pad, PBL_IF_ROUND_ELSE(22, 12), bounds.size.w - pad * 2, 24));
   text_layer_set_font(s_confirm_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text_alignment(s_confirm_title_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
-  text_layer_set_text(s_confirm_title_layer, "Leave Call?");
   layer_add_child(root, text_layer_get_layer(s_confirm_title_layer));
 
-  snprintf(s_confirm_buf, sizeof(s_confirm_buf),
-           "Leaving: %s\nNext: %s\n\nSELECT: Switch\nDOWN: Stay",
-           s_active_callee, next_name);
-  s_confirm_body_layer = text_layer_create(GRect(pad, PBL_IF_ROUND_ELSE(50, 40), bounds.size.w - pad * 2, bounds.size.h - 60));
+  if (s_confirm_mode == CONFIRM_END_CALL) {
+    text_layer_set_text(s_confirm_title_layer, "End Call?");
+    snprintf(s_confirm_buf, sizeof(s_confirm_buf),
+             "Leave: %s\n\nSELECT: End Call\nDOWN: Stay",
+             s_active_callee);
+  } else if (s_confirm_mode == CONFIRM_CONTACT_IN_CALL && s_pending_row >= 0 && s_pending_row < s_contact_count) {
+    text_layer_set_text(s_confirm_title_layer, "Invite Contact?");
+    snprintf(s_confirm_buf, sizeof(s_confirm_buf),
+             "%s\n\nSELECT: Invite Now\nUP: New Call\nDOWN: Cancel",
+             s_contacts[s_pending_row].name);
+  } else {
+    const char *next_name = "New Google Meet";
+    if (s_pending_section == 0 && s_pending_row > 0 && (s_pending_row - 1) < s_meeting_count) {
+      next_name = s_meetings[s_pending_row - 1].title;
+    }
+    text_layer_set_text(s_confirm_title_layer, "Leave Call?");
+    snprintf(s_confirm_buf, sizeof(s_confirm_buf),
+             "Leaving: %s\nNext: %s\n\nSELECT: Switch\nDOWN: Stay",
+             s_active_callee, next_name);
+  }
+
+  s_confirm_body_layer = text_layer_create(GRect(pad, PBL_IF_ROUND_ELSE(50, 40), bounds.size.w - pad * 2, bounds.size.h - 52));
   text_layer_set_font(s_confirm_body_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_confirm_body_layer, PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft));
   text_layer_set_text(s_confirm_body_layer, s_confirm_buf);
@@ -632,13 +814,16 @@ static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *idx, void *ct
       return;
     }
     section -= 1;
+    if (section == 1 && s_contact_count == 0) return;
     s_pending_section = section;
     s_pending_row = idx->row;
+    s_confirm_mode = (section == 1) ? CONFIRM_CONTACT_IN_CALL : CONFIRM_SWITCH_MEETING;
     vibes_short_pulse();
     window_stack_push(s_confirm_window, true);
     return;
   }
 
+  if (section == 1 && s_contact_count == 0) return;
   start_selected_target(section, idx->row);
 }
 
@@ -679,6 +864,7 @@ static void menu_window_load(Window *window) {
 
 static void menu_window_unload(Window *window) {
   menu_layer_destroy(s_menu_layer);
+  s_menu_layer = NULL;
   status_bar_layer_destroy(s_status_bar);
 }
 
@@ -686,21 +872,40 @@ static void menu_window_unload(Window *window) {
  * AppMessage Inbox (Phone PebbleKit JS -> Watch)
  * ------------------------------------------------------------------------- */
 static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
+  Tuple *m_cnt = dict_find(iter, MESSAGE_KEY_MEETING_COUNT);
+  if (m_cnt) {
+    int count = (int)m_cnt->value->int32;
+    if (count < 0) count = 0;
+    if (count > MAX_MEETINGS) count = MAX_MEETINGS;
+    s_meeting_count = count;
+    if (s_menu_layer) menu_layer_reload_data(s_menu_layer);
+  }
+
   Tuple *m_idx = dict_find(iter, MESSAGE_KEY_MEETING_INDEX);
   Tuple *m_title = dict_find(iter, MESSAGE_KEY_MEETING_TITLE);
   Tuple *m_time = dict_find(iter, MESSAGE_KEY_MEETING_TIME);
   Tuple *m_code = dict_find(iter, MESSAGE_KEY_MEET_CODE);
+  Tuple *m_att = dict_find(iter, MESSAGE_KEY_MEETING_ATTENDEES);
   if (m_idx && m_title && m_code) {
-    int idx = m_idx->value->int32;
+    int idx = (int)m_idx->value->int32;
     if (idx >= 0 && idx < MAX_MEETINGS) {
       snprintf(s_meetings[idx].title, NAME_LEN, "%s", m_title->value->cstring);
       snprintf(s_meetings[idx].time_str, ROLE_LEN, "%s",
                m_time ? m_time->value->cstring : "Today");
       snprintf(s_meetings[idx].meet_code, CODE_LEN, "%s", m_code->value->cstring);
-      s_meetings[idx].attendees = 4;
+      s_meetings[idx].attendees = m_att ? (int)m_att->value->int32 : 1;
       if (idx + 1 > s_meeting_count) s_meeting_count = idx + 1;
-      menu_layer_reload_data(s_menu_layer);
+      if (s_menu_layer) menu_layer_reload_data(s_menu_layer);
     }
+  }
+
+  Tuple *c_cnt = dict_find(iter, MESSAGE_KEY_CONTACT_COUNT);
+  if (c_cnt) {
+    int count = (int)c_cnt->value->int32;
+    if (count < 0) count = 0;
+    if (count > MAX_CONTACTS) count = MAX_CONTACTS;
+    s_contact_count = count;
+    if (s_menu_layer) menu_layer_reload_data(s_menu_layer);
   }
 
   Tuple *c_idx = dict_find(iter, MESSAGE_KEY_CONTACT_INDEX);
@@ -708,15 +913,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
   Tuple *c_role = dict_find(iter, MESSAGE_KEY_CONTACT_ROLE);
   Tuple *c_email = dict_find(iter, MESSAGE_KEY_CONTACT_EMAIL);
   if (c_idx && c_name) {
-    int idx = c_idx->value->int32;
+    int idx = (int)c_idx->value->int32;
     if (idx >= 0 && idx < MAX_CONTACTS) {
       snprintf(s_contacts[idx].name, NAME_LEN, "%s", c_name->value->cstring);
       snprintf(s_contacts[idx].role, ROLE_LEN, "%s",
-               c_role ? c_role->value->cstring : "Google Contact");
+               c_role ? c_role->value->cstring : "Favorite");
       snprintf(s_contacts[idx].email, sizeof(s_contacts[idx].email), "%s",
                c_email ? c_email->value->cstring : "");
       if (idx + 1 > s_contact_count) s_contact_count = idx + 1;
-      menu_layer_reload_data(s_menu_layer);
+      if (s_menu_layer) menu_layer_reload_data(s_menu_layer);
     }
   }
 
@@ -728,7 +933,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
 
   Tuple *cnt_t = dict_find(iter, MESSAGE_KEY_PARTICIPANT_COUNT);
   if (cnt_t) {
-    s_participant_count = cnt_t->value->int32;
+    s_participant_count = (int)cnt_t->value->int32;
     update_call_ui();
   }
 
@@ -744,15 +949,26 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
     update_call_ui();
   }
 
+  Tuple *hand_t = dict_find(iter, MESSAGE_KEY_SYNC_HAND_RAISED);
+  if (hand_t) {
+    s_hand_raised = hand_t->value->int32 == 1;
+    update_call_ui();
+  }
+
   Tuple *rec_t = dict_find(iter, MESSAGE_KEY_SYNC_RECORDING);
   if (rec_t) {
     bool next_rec = rec_t->value->int32 == 1;
     if (next_rec && !s_is_recording && s_cfg.alert_recording) {
-      snprintf(s_banner_body, sizeof(s_banner_body), "Recording started (BACK)");
-      s_banner_visible = true;
+      show_watch_banner(BANNER_KIND_RECORDING, "Recording started (BACK)");
       vibes_short_pulse();
     }
     s_is_recording = next_rec;
+    update_call_ui();
+  }
+
+  Tuple *cap_t = dict_find(iter, MESSAGE_KEY_EVT_CAPTION);
+  if (cap_t && s_cfg.show_captions) {
+    snprintf(s_caption_buf, sizeof(s_caption_buf), "%s", cap_t->value->cstring);
     update_call_ui();
   }
 
@@ -821,6 +1037,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
   Tuple *cfg_cap = dict_find(iter, MESSAGE_KEY_CFG_SHOW_CAPTIONS);
   if (cfg_cap) {
     s_cfg.show_captions = cfg_cap->value->int32 == 1;
+    if (!s_cfg.show_captions) s_caption_buf[0] = '\0';
     cfg_changed = true;
   }
   Tuple *cfg_chat = dict_find(iter, MESSAGE_KEY_CFG_ALERT_CHAT);
@@ -844,25 +1061,23 @@ static void inbox_received_handler(DictionaryIterator *iter, void *ctx) {
     cfg_changed = true;
   }
   if (cfg_changed) {
+    s_cfg.version = CONFIG_STRUCT_VERSION;
     persist_write_data(PERSIST_KEY_CONFIG, &s_cfg, sizeof(s_cfg));
-    if (s_call_window && window_is_loaded(s_call_window) && s_action_bar) {
-      action_bar_layer_set_click_config_provider(s_action_bar, call_click_config_provider);
-    }
+    refresh_call_click_config();
     update_call_ui();
   }
 
   Tuple *banner_t = dict_find(iter, MESSAGE_KEY_EVT_BANNER_BODY);
   if (banner_t) {
     Tuple *kind_t = dict_find(iter, MESSAGE_KEY_EVT_BANNER_KIND);
-    int kind = kind_t ? (int)kind_t->value->int32 : BANNER_KIND_GENERIC;
+    WatchBannerKind kind = kind_t ? (WatchBannerKind)kind_t->value->int32 : BANNER_KIND_GENERIC;
     bool allowed = true;
     if (kind == BANNER_KIND_CHAT && !s_cfg.alert_chat) allowed = false;
     if (kind == BANNER_KIND_RECORDING && !s_cfg.alert_recording) allowed = false;
     if (kind == BANNER_KIND_LOBBY && !s_cfg.alert_lobby) allowed = false;
     if (kind == BANNER_KIND_WRAP_UP && s_cfg.wrap_up_minutes == 0) allowed = false;
     if (allowed) {
-      snprintf(s_banner_body, sizeof(s_banner_body), "%s", banner_t->value->cstring);
-      s_banner_visible = true;
+      show_watch_banner(kind, banner_t->value->cstring);
       vibes_short_pulse();
       update_call_ui();
     }
@@ -880,9 +1095,14 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void init(void) {
-  if (persist_exists(PERSIST_KEY_CONFIG)) {
-    persist_read_data(PERSIST_KEY_CONFIG, &s_cfg, sizeof(s_cfg));
-    s_ptt_mode = s_cfg.default_ptt;
+  if (persist_exists(PERSIST_KEY_CONFIG) &&
+      persist_get_size(PERSIST_KEY_CONFIG) == sizeof(PebbleMeetConfig)) {
+    PebbleMeetConfig loaded;
+    if (persist_read_data(PERSIST_KEY_CONFIG, &loaded, sizeof(loaded)) == sizeof(loaded) &&
+        loaded.version == CONFIG_STRUCT_VERSION) {
+      s_cfg = loaded;
+      s_ptt_mode = s_cfg.default_ptt;
+    }
   }
 
   s_icon_mic_on = gbitmap_create_with_resource(RESOURCE_ID_ICON_MIC_ON);
@@ -917,8 +1137,7 @@ static void init(void) {
 #endif
 
   app_message_register_inbox_received(inbox_received_handler);
-  app_message_open(512, 512);
-  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+  app_message_open(1024, 512);
 
   window_stack_push(s_menu_window, true);
 }

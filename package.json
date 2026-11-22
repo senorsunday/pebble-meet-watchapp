@@ -1,16 +1,16 @@
 {
   "name": "pebble-meet-watchapp",
   "author": "Alex Palson",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "Tactile Google Meet hardware controller watchapp for Pebble smartwatches.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-github-username/pebble-meet-watchapp.git"
+    "url": "https://github.com/senorsunday/pebble-meet-watchapp.git"
   },
-  "homepage": "https://github.com/your-github-username/pebble-meet-watchapp",
+  "homepage": "https://github.com/senorsunday/pebble-meet-watchapp",
   "bugs": {
-    "url": "https://github.com/your-github-username/pebble-meet-watchapp/issues"
+    "url": "https://github.com/senorsunday/pebble-meet-watchapp/issues"
   },
   "keywords": [
     "pebble-app",
@@ -18,9 +18,7 @@
     "remote",
     "rebble"
   ],
-  "dependencies": {
-    "pebble-clay": "^1.0.4"
-  },
+  "dependencies": {},
   "pebble": {
     "displayName": "PebbleMeet",
     "uuid": "5b7c8e90-4a12-4c9d-9f31-81a6e042f109",
@@ -42,9 +40,12 @@
     "messageKeys": [
       "CMD_START_CALL",
       "CMD_JOIN_MEETING",
+      "CMD_NEW_MEET",
+      "CMD_INVITE_CONTACT",
       "CMD_TOGGLE_MUTE",
       "CMD_TOGGLE_CAMERA",
       "CMD_RAISE_HAND",
+      "CMD_TOGGLE_CAPTIONS",
       "CMD_SEND_CHAT",
       "CMD_ADMIT_GUEST",
       "CMD_END_CALL",
@@ -67,9 +68,13 @@
       "CFG_WRAP_UP_MINUTES",
       "EVT_BANNER_KIND",
       "EVT_BANNER_BODY",
+      "EVT_CAPTION",
+      "MEETING_COUNT",
       "MEETING_INDEX",
       "MEETING_TITLE",
       "MEETING_TIME",
+      "MEETING_ATTENDEES",
+      "CONTACT_COUNT",
       "CONTACT_INDEX",
       "CONTACT_NAME",
       "CONTACT_ROLE",
@@ -79,7 +84,8 @@
       "PARTICIPANT_COUNT",
       "SYNC_MUTE",
       "SYNC_CAMERA",
-      "SYNC_RECORDING"
+      "SYNC_RECORDING",
+      "SYNC_HAND_RAISED"
     ],
     "resources": {
       "media": [
