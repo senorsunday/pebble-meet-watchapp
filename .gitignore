@@ -1,5 +1,9 @@
 build/
 node_modules/
+oauth-worker/node_modules/
+oauth-worker/.dev.vars
+.wrangler/
 .DS_Store
 *.pbw
 *.log
+.lock-waf_*
